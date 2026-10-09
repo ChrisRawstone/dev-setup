@@ -309,14 +309,16 @@ if [[ "$INSTALL_EXTRAS" == true ]]; then
       continue
     fi
     installed="${(L)$("$cli" --list-extensions 2>/dev/null)}"
-    n_have=0
+    n_have=0; n_new=0
     while read -r ext; do
       [[ -z "$ext" ]] && continue
       grep -qixF "$ext" "$DOTFILES_DIR/local-extensions.txt" && continue
       if [[ "$installed" == *"${(L)ext}"* ]]; then (( n_have++ )); continue; fi
+      # Listed one by one only when they fail; successes are summed up below
       extra "$label extension $ext" "$cli --install-extension $ext (it may not exist in ${label}'s extension store)" \
-        "$cli" --install-extension "$ext"
+        "$cli" --install-extension "$ext" && { DONE[-1]=(); (( n_new++ )); }
     done < "$DOTFILES_DIR/$list/extensions.txt"
+    (( n_new > 0 )) && ok "$label: $n_new extensions installed"
     (( n_have > 0 )) && skipped "$n_have $label extensions"
   done
 
@@ -327,9 +329,10 @@ if [[ "$INSTALL_EXTRAS" == true ]]; then
     python3 -c "
 import json, sys
 s = json.load(open(sys.argv[1]))
+markets = [m['source']['repo'] for m in s.get('extraKnownMarketplaces', {}).values()]
 if any(p.endswith('@claude-plugins-official') for p in s.get('enabledPlugins', {})):
-    print('marketplace', 'anthropics/claude-plugins-official')
-for m in s.get('extraKnownMarketplaces', {}).values(): print('marketplace', m['source']['repo'])
+    markets.insert(0, 'anthropics/claude-plugins-official')
+for m in dict.fromkeys(markets): print('marketplace', m)
 for p, on in s.get('enabledPlugins', {}).items():
     if on: print('plugin', p)" "$DOTFILES_DIR/claude/settings.json" | while read -r kind name; do
       if [[ "$kind" == marketplace && "$have_markets" == *"$name"* ]]; then
