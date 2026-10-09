@@ -1,6 +1,5 @@
 anthropic.claude-code
 bradlc.vscode-tailwindcss
-chrisrawstone.agentscompare
 cweijan.vscode-office
 databricks.neon-local-connect
 dbaeumer.vscode-eslint
@@ -37,4 +36,3 @@ svelte.svelte-vscode
 tailscale.vscode-tailscale
 tamasfe.even-better-toml
 tomoki1207.pdf
-undefined_publisher.compare-branch

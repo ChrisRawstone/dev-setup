@@ -1,0 +1,4 @@
+# Extensions built locally (not on the Marketplace): skipped by init_script --extras,
+# kept out of the extension lists by sync.sh. Install them from their own repo builds.
+chrisrawstone.agentscompare
+undefined_publisher.compare-branch

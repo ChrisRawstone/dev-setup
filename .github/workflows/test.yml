@@ -99,8 +99,9 @@ jobs:
           check() { if eval "$2" >/dev/null 2>&1; then echo "ok      $1"; else echo "MISSING $1"; rc=1; fi; }
           for e in code cursor; do
             want=$(wc -l < "${e/code/vscode}/extensions.txt" | tr -d ' ')
-            have=$(comm -12 <(sort -f "${e/code/vscode}/extensions.txt" | tr A-Z a-z) <($e --list-extensions | tr A-Z a-z | sort) | wc -l | tr -d ' ')
-            echo "        $e extensions: $have/$want"; [ "$have" = "$want" ] || rc=1
+            missing=$(comm -23 <(tr A-Z a-z < "${e/code/vscode}/extensions.txt" | sort) <($e --list-extensions | tr A-Z a-z | sort))
+            echo "        $e extensions: $((want - $(echo -n "$missing" | grep -c .)))/$want"
+            [ -z "$missing" ] || { echo "$missing" | sed "s/^/MISSING $e extension /"; rc=1; }
           done
           check "claude CLI" "command -v claude"
           check "cursor-agent CLI" "command -v cursor-agent"

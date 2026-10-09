@@ -142,10 +142,14 @@ link_config "codex/skills/claude-skill" "$HOME/.codex/skills/claude-skill"
 # when its tool is missing and is safe to re-run.
 # ---------------------------------------------------------------------------
 EXTRAS_FAILED=()
+EXTRAS_LOG=$(mktemp)
 extra() {  # extra <description> <command...>
   local what="$1"; shift
   echo "  $what"
-  "$@" </dev/null >/dev/null 2>&1 || { echo "    FAILED: $what"; EXTRAS_FAILED+=("$what"); }
+  if ! "$@" </dev/null >"$EXTRAS_LOG" 2>&1; then
+    echo "    FAILED: $what"; tail -8 "$EXTRAS_LOG" | sed 's/^/      /'
+    EXTRAS_FAILED+=("$what")
+  fi
 }
 
 if [[ "$INSTALL_EXTRAS" == true ]]; then
@@ -168,6 +172,7 @@ if [[ "$INSTALL_EXTRAS" == true ]]; then
     installed="${(L)$("$cli" --list-extensions 2>/dev/null)}"
     while read -r ext; do
       [[ -z "$ext" || "$installed" == *"${(L)ext}"* ]] && continue
+      grep -qixF "$ext" "$DOTFILES_DIR/local-extensions.txt" && continue
       extra "$cli extension $ext" "$cli" --install-extension "$ext"
     done < "$DOTFILES_DIR/${editor#*:}/extensions.txt"
   done
@@ -177,6 +182,8 @@ if [[ "$INSTALL_EXTRAS" == true ]]; then
     python3 -c "
 import json, sys
 s = json.load(open(sys.argv[1]))
+if any(p.endswith('@claude-plugins-official') for p in s.get('enabledPlugins', {})):
+    print('marketplace', 'anthropics/claude-plugins-official')
 for m in s.get('extraKnownMarketplaces', {}).values(): print('marketplace', m['source']['repo'])
 for p, on in s.get('enabledPlugins', {}).items():
     if on: print('plugin', p)" "$DOTFILES_DIR/claude/settings.json" | while read -r kind name; do

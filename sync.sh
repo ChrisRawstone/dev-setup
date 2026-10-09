@@ -2,7 +2,8 @@
 # Copy the rendered (non-symlinked) configs back into the repo, with $HOME turned back
 # into __HOME__, so changes made by the apps themselves can be committed. Linked files
 # need no syncing: editing them edits the repo.
-# Pass --brew to also re-dump the Brewfile from what this machine has installed.
+# Pass --installed to also refresh the Brewfile, editor extension lists and az extensions
+# from what this machine has installed (review the diff: the Brewfile loses its comments).
 DOTFILES_DIR=$(cd "$(dirname "$0")" && pwd)
 
 pull() {
@@ -17,10 +18,12 @@ pull "$HOME/.cursor/hooks.json" "cursor/hooks.json"
 pull "$HOME/.config/cxstatusline/turn-renderer.py" "cxstatusline/turn-renderer.py"
 pull "$HOME/.ssh/config" "ssh/config"
 
-# Installed-things lists (only when the tool exists, so a bare machine doesn't wipe them)
-command -v cursor >/dev/null && cursor --list-extensions | sort -f > "$DOTFILES_DIR/cursor/extensions.txt"
-command -v code >/dev/null && code --list-extensions | sort -f > "$DOTFILES_DIR/vscode/extensions.txt"
-command -v az >/dev/null && az extension list --query '[].name' -o tsv | sort > "$DOTFILES_DIR/azure-cli-extensions.txt"
-[[ "$1" == "--brew" ]] && brew bundle dump --force --no-vscode --file="$DOTFILES_DIR/Brewfile"
+if [[ "$1" == "--installed" ]]; then
+  local_only=$(grep -v '^#' "$DOTFILES_DIR/local-extensions.txt")
+  command -v cursor >/dev/null && cursor --list-extensions | grep -vixF "$local_only" | sort -f > "$DOTFILES_DIR/cursor/extensions.txt"
+  command -v code >/dev/null && code --list-extensions | grep -vixF "$local_only" | sort -f > "$DOTFILES_DIR/vscode/extensions.txt"
+  command -v az >/dev/null && az extension list --query '[].name' -o tsv | sort > "$DOTFILES_DIR/azure-cli-extensions.txt"
+  command -v brew >/dev/null && brew bundle dump --force --no-vscode --file="$DOTFILES_DIR/Brewfile"
+fi
 
 git -C "$DOTFILES_DIR" status --short
