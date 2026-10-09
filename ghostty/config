@@ -1,0 +1,36 @@
+# Ghostty terminal configuration
+
+# Clean look: tab bar integrated into the titlebar.
+# NOTE: do not use "hidden" here -- it kills native tabs, so Cmd+T
+# silently opens a new window instead of a tab.
+macos-titlebar-style = tabs
+
+# Font configuration
+font-family = JetBrainsMono Nerd Font
+font-size = 14
+
+# Runtime overrides (managed by rune command)
+config-file = ?~/.config/ghostty/rune-override
+
+# Theme: ported from the "Clear Dark" profile in macOS Terminal.app
+# (see ~/.config/ghostty/themes/clear-dark)
+theme = clear-dark
+background-opacity = 0.95
+background-blur = 20
+
+# Terminal behavior
+copy-on-select = true
+macos-option-as-alt = true
+window-save-state = always
+
+# Tabs: open new tabs at the far right, and allow naming them
+# (Cmd+Shift+I -> type a label, e.g. the agent/task the tab is running)
+window-new-tab-position = end
+keybind = cmd+shift+i=prompt_tab_title
+
+# Dropdown scratch terminal, so one-off commands don't become tabs.
+# Global hotkey needs Accessibility permission on first use.
+keybind = global:cmd+alt+grave_accent=toggle_quick_terminal
+quick-terminal-position = top
+
+# Presenter mode keybindings removed - use `rune` command instead

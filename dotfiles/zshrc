@@ -1,0 +1,565 @@
+# Lightweight Zsh Configuration
+# No heavy frameworks - just the essentials
+
+# =============================================================================
+# Helpers
+# =============================================================================
+
+# eval_cached <cache-name> <command> [args...]
+# Many tools ship their shell integration as `eval "$(tool init zsh)"`, which
+# costs a process spawn on every single shell start. Cache the generated
+# snippet and source that instead. The cache is regenerated whenever the tool's
+# binary is newer than the cache, so upgrades are picked up on the next shell.
+# Delete ~/.cache/zsh-init to force a rebuild.
+eval_cached() {
+  local name=$1 bin
+  shift
+  # accept either an absolute path or a bare command name
+  if [[ $1 == */* ]]; then bin=$1; else bin=${commands[$1]}; fi
+  [[ -n $bin ]] || return 1
+  # drop the command name and invoke the resolved binary directly, so a shell
+  # function of the same name (e.g. wt's own wrapper) can't intercept this
+  shift
+
+  local dir=${XDG_CACHE_HOME:-$HOME/.cache}/zsh-init
+  local cache=$dir/$name.zsh
+
+  if [[ ! -s $cache || $bin -nt $cache ]]; then
+    mkdir -p $dir
+    if $bin "$@" > $cache.tmp$$ 2>/dev/null; then
+      mv -f $cache.tmp$$ $cache
+    else
+      rm -f $cache.tmp$$
+      return 1
+    fi
+  fi
+
+  source $cache
+}
+
+# =============================================================================
+# PATH Configuration
+# =============================================================================
+
+export PATH=$HOME/bin:$HOME/.local/bin:/usr/local/bin:$PATH
+export PATH="$PATH":"$HOME/.pub-cache/bin"
+
+# PostgreSQL
+export PATH="/opt/homebrew/opt/postgresql@17/bin:$PATH"
+export LDFLAGS="-L/opt/homebrew/opt/postgresql@17/lib"
+export CPPFLAGS="-I/opt/homebrew/opt/postgresql@17/include"
+
+# Java
+export PATH="/opt/homebrew/opt/openjdk@21/bin:$PATH"
+
+# Go
+# `go env GOPATH` costs a ~50ms process spawn just to print its own default,
+# so use the default directly and still honour an explicitly exported GOPATH.
+command -v go >/dev/null && export PATH="${GOPATH:-$HOME/go}/bin:$PATH"
+
+# Android SDK
+export ANDROID_HOME="$HOME/Library/Android/sdk"
+export PATH="$ANDROID_HOME/platform-tools:$PATH"
+export PATH="$ANDROID_HOME/tools:$PATH"
+
+# Google
+
+export GOOGLE_CLOUD_PROJECT="lbf-sb-homeapp-01-prj"
+export CLOUDSDK_CORE_PROJECT="lbf-sb-homeapp-01-prj"
+
+# =============================================================================
+# Homebrew
+# =============================================================================
+
+# `brew shellenv` is a ~350ms Ruby/bash spawn; cache its (static) output.
+eval_cached brew-shellenv /opt/homebrew/bin/brew shellenv \
+  || eval "$(/opt/homebrew/bin/brew shellenv)"
+
+# =============================================================================
+# Zsh Plugins (sourced directly from Homebrew)
+# =============================================================================
+
+# Use $HOMEBREW_PREFIX (set by shellenv above) rather than calling
+# `brew --prefix` — that was four more spawns at ~170ms each.
+[ -f "$HOMEBREW_PREFIX/share/zsh-autosuggestions/zsh-autosuggestions.zsh" ] && \
+  source "$HOMEBREW_PREFIX/share/zsh-autosuggestions/zsh-autosuggestions.zsh"
+[ -f "$HOMEBREW_PREFIX/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh" ] && \
+  source "$HOMEBREW_PREFIX/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
+
+# =============================================================================
+# Completions
+# =============================================================================
+
+autoload bashcompinit && bashcompinit
+
+# A full compinit re-audits every directory in $fpath and rewrites the dump
+# (~650ms). Do that at most once a day; the rest of the time load the existing
+# dump with -C, which skips the audit and the rebuild. Run `compinit` by hand
+# (or delete ~/.zcompdump) after installing something that ships completions.
+#
+# The freshness test has to be a glob in an array assignment: `[[ ]]` does no
+# filename generation, so testing the pattern there always looks non-empty and
+# silently pins us to -C. Bare `(...)` qualifiers are used rather than `(#q...)`
+# because the latter needs EXTENDED_GLOB, which this config does not set.
+autoload -Uz compinit
+() {
+  local -a fresh_dump=( $HOME/.zcompdump(N.mh-24) )
+  if (( $#fresh_dump )); then
+    compinit -C
+  else
+    compinit
+    # compinit only rewrites the dump when the completions actually changed, so
+    # without this the mtime stays old and every later shell takes the slow
+    # path forever. Touching it restarts the 24h clock.
+    touch $HOME/.zcompdump
+  fi
+}
+
+# AWS CLI
+[ -x /usr/local/bin/aws_completer ] && complete -C '/usr/local/bin/aws_completer' aws
+
+# Terraform
+command -v terraform >/dev/null && complete -o nospace -C "$(command -v terraform)" terraform
+
+# Halfspace CLI
+# add if statement to check if halfspace is installed before enabling completion
+if command -v halfspace &> /dev/null; then
+  eval_cached halfspace-completion halfspace completion zsh
+fi
+
+# =============================================================================
+# NVM (Node Version Manager) — lazy
+# =============================================================================
+#
+# Sourcing nvm.sh the normal way runs nvm_auto, i.e. `nvm use default`, on every
+# shell start. On this machine that costs ~5.2s: nvm is 160KB of POSIX shell
+# that resolves the alias chain through dozens of forked subshells and then
+# spawns `npm config get prefix` (~450ms on its own). It was ~85% of startup.
+#
+# Instead: put the default version's bin dir on PATH with plain file reads (no
+# forks), and defer nvm.sh itself until the first actual `nvm` call.
+
+export NVM_DIR="$HOME/.nvm"
+
+# Follow the `default` alias chain (default -> lts/* -> lts/krypton -> v24.19.0)
+# using builtin reads. $(<file) is a zsh optimisation that does not fork.
+() {
+  local v=default i
+  for i in {1..10}; do
+    [[ -f $NVM_DIR/alias/$v ]] || break
+    v=$(<$NVM_DIR/alias/$v)
+  done
+  [[ -n $v ]] || return
+
+  local bin=$NVM_DIR/versions/node/$v/bin
+  if [[ ! -d $bin ]]; then
+    # partial version (e.g. "24") -> highest installed match, as `nvm use` does
+    local -a matches=($NVM_DIR/versions/node/${v}*(/Nn))
+    (( $#matches )) && bin=${matches[-1]}/bin
+  fi
+  [[ -d $bin ]] && path=($bin $path)
+}
+
+# First `nvm ...` call pays for loading nvm.sh; --no-use keeps it from
+# re-running the auto-activation we just did by hand.
+nvm() {
+  unfunction nvm
+  [ -s "/opt/homebrew/opt/nvm/nvm.sh" ] && \. "/opt/homebrew/opt/nvm/nvm.sh" --no-use
+  [ -s "/opt/homebrew/opt/nvm/etc/bash_completion.d/nvm" ] && \. "/opt/homebrew/opt/nvm/etc/bash_completion.d/nvm"
+  nvm "$@"
+}
+
+# =============================================================================
+# Google Cloud SDK
+# =============================================================================
+
+if [ -f "$HOME/google-cloud-sdk/path.zsh.inc" ]; then
+  source "$HOME/google-cloud-sdk/path.zsh.inc"
+fi
+
+if [ -f "$HOME/google-cloud-sdk/completion.zsh.inc" ]; then
+  source "$HOME/google-cloud-sdk/completion.zsh.inc"
+fi
+
+# =============================================================================
+# Terminal Settings
+# =============================================================================
+
+export COLORTERM=truecolor
+export CLICOLOR=1
+
+# =============================================================================
+# Aliases
+# =============================================================================
+
+alias pycharm="open -na \"PyCharm.app\""
+alias git_remove_branches="tmp=\$(mktemp) && git branch --format='%(refname:short)' | grep -v '^main$' > \$tmp && vim \$tmp && cat \$tmp | xargs git branch -D && rm \$tmp"
+alias ll="ls -lhF"
+
+# =============================================================================
+# Functions
+# =============================================================================
+
+# workon: Start or attach to a Zellij session for the current directory
+# Usage: workon [--fresh] [folder]
+workon() {
+  local fresh=0
+  local target_dir="."
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --fresh)
+        fresh=1
+        shift
+        ;;
+      *)
+        target_dir="$1"
+        shift
+        ;;
+    esac
+  done
+
+  local resolved_dir=$(cd "$target_dir" 2>/dev/null && pwd)
+  if [[ -z "$resolved_dir" ]]; then
+    echo "Error: Directory '$target_dir' not found"
+    return 1
+  fi
+
+  local session_name="${resolved_dir##*/}"
+  session_name="${session_name//./-}"
+
+  if [[ "$fresh" -eq 1 ]]; then
+    local fresh_session_name="${session_name}-fresh-$(date +%H%M%S)"
+    (cd "$resolved_dir" && zellij -n dev -s "$fresh_session_name")
+  else
+    if [[ -n "$ZELLIJ" ]]; then
+      if ! zellij action switch-session --cwd "$resolved_dir" "$session_name"; then
+        zellij action switch-session --cwd "$resolved_dir" --layout dev "$session_name"
+      fi
+    else
+      (cd "$resolved_dir" && zellij --layout dev attach -c "$session_name")
+    fi
+  fi
+}
+
+wts() {
+  if ! command -v wt >/dev/null 2>&1; then
+    echo "Error: wt command not found"
+    return 1
+  fi
+
+  local has_branch=0
+  local arg
+  for arg in "$@"; do
+    if [[ "$arg" == "--" ]]; then
+      break
+    fi
+    if [[ "$arg" == "-" || "$arg" == "^" || "$arg" == "@" || "$arg" != -* ]]; then
+      has_branch=1
+      break
+    fi
+  done
+
+  if [[ "$has_branch" -eq 1 ]]; then
+    wt switch --no-cd -x 'workon "{{ worktree_path }}"' "$@"
+    return
+  fi
+
+  local selected_branch
+  selected_branch=$(wt switch --no-cd "$@") || return 1
+  if [[ -z "$selected_branch" ]]; then
+    return 1
+  fi
+
+  wt switch --no-cd -x 'workon "{{ worktree_path }}"' "$selected_branch"
+}
+
+# workon-issue: Prepare issue worktree and open dev session (run agent manually in Agent tab)
+# Usage: workon-issue [--fresh] <issue-number>
+workon-issue() {
+  local fresh=0
+  local issue_number=""
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --fresh)
+        fresh=1
+        shift
+        ;;
+      -* )
+        echo "Error: Unknown option '$1'"
+        echo "Usage: workon-issue [--fresh] <issue-number>"
+        return 1
+        ;;
+      *)
+        if [[ -n "$issue_number" ]]; then
+          echo "Error: Only one issue number is supported"
+          echo "Usage: workon-issue [--fresh] <issue-number>"
+          return 1
+        fi
+        issue_number="$1"
+        shift
+        ;;
+    esac
+  done
+
+  if [[ -z "$issue_number" ]]; then
+    echo "Usage: workon-issue [--fresh] <issue-number>"
+    return 1
+  fi
+
+  local configs_dir="$HOME/source/configs"
+  local start_issue_script="$configs_dir/scripts/start-issue.sh"
+  local repo_root
+  local setup_output
+  local worktree_path=""
+  local prompt_file=""
+
+  if [[ ! -x "$start_issue_script" ]]; then
+    echo "Error: '$start_issue_script' not found or not executable"
+    return 1
+  fi
+
+  repo_root=$(git rev-parse --show-toplevel 2>/dev/null)
+  if [[ -z "$repo_root" ]]; then
+    echo "Error: workon-issue must be run inside a git repository"
+    return 1
+  fi
+
+  if ! setup_output=$(cd "$repo_root" && "$start_issue_script" --no-launch "$issue_number"); then
+    return 1
+  fi
+
+  while IFS= read -r line; do
+    case "$line" in
+      WORKTREE_PATH=*) worktree_path="${line#WORKTREE_PATH=}" ;;
+      PROMPT_FILE=*) prompt_file="${line#PROMPT_FILE=}" ;;
+    esac
+  done <<< "$setup_output"
+
+  if [[ -z "$worktree_path" ]]; then
+    echo "Error: Could not determine worktree path from start-issue output"
+    return 1
+  fi
+
+  if [[ -z "$prompt_file" ]]; then
+    prompt_file="$worktree_path/.issue-prompt.md"
+  fi
+
+  local session_name="issue-${issue_number}"
+
+  if [[ ! -f "$prompt_file" ]]; then
+    echo "Error: Prompt file not found at '$prompt_file'"
+    return 1
+  fi
+
+  echo "Issue prompt: $prompt_file"
+
+  if [[ "$fresh" -eq 1 ]]; then
+    local fresh_session_name="${session_name}-fresh-$(date +%H%M%S)"
+    (
+      cd "$worktree_path" || exit 1
+      zellij --layout dev -n dev -s "$fresh_session_name"
+    )
+  else
+    (
+      cd "$worktree_path" || exit 1
+      zellij --layout dev attach -c "$session_name"
+    )
+  fi
+}
+
+workon-lbf() {
+  local target_dir="${1:-.}"
+  local resolved_dir=$(cd "$target_dir" 2>/dev/null && pwd)
+  if [[ -z "$resolved_dir" ]]; then
+    echo "Error: Directory '$target_dir' not found"
+    return 1
+  fi
+  local session_name="${resolved_dir##*/}"
+  session_name="${session_name//./-}"
+  (cd "$resolved_dir" && zellij --layout dev-gemini attach -c "$session_name")
+}
+
+# workon-fullstack: Start or attach to a Zellij session with fullstack layout
+# Usage: workon-fullstack [folder]
+workon-fullstack() {
+  local target_dir="${1:-.}"
+  local resolved_dir=$(cd "$target_dir" 2>/dev/null && pwd)
+  if [[ -z "$resolved_dir" ]]; then
+    echo "Error: Directory '$target_dir' not found"
+    return 1
+  fi
+  local session_name="${resolved_dir##*/}"
+  session_name="${session_name//./-}-fullstack"
+  (cd "$resolved_dir" && zellij --layout fullstack attach -c "$session_name")
+}
+
+# rune: Presenter mode with configurable zoom levels
+# Usage: rune [level]
+#   rune     - Toggle between OFF and level 1 (120%)
+#   rune 0   - Disable zoom (100% / default font size)
+#   rune 1   - 120% zoom
+#   rune 2   - 140% zoom
+#   rune N   - (100 + N*20)% zoom
+rune() {
+  local state_file="$HOME/.rune_level"
+  local override_file="$HOME/.config/ghostty/rune-override"
+  local base_font_size=14
+  local level="$1"
+  
+  # Handle toggle mode (no argument)
+  if [[ -z "$level" ]]; then
+    if [[ -f "$state_file" ]]; then
+      level=0  # Currently on, turn off
+    else
+      level=1  # Currently off, turn on to level 1
+    fi
+  fi
+  
+  # Validate level is a non-negative integer
+  if ! [[ "$level" =~ ^[0-9]+$ ]]; then
+    echo "Error: Level must be a non-negative integer"
+    return 1
+  fi
+  
+  # Apply zoom BEFORE animation to prevent hopping
+  local zoom_percent=100
+  local font_size="$base_font_size"
+  
+  if [[ "$level" -eq 0 ]]; then
+    # Disable zoom - remove override file and state
+    rm -f "$override_file" "$state_file"
+  else
+    # Calculate font size: base * (1 + level * 0.2)
+    zoom_percent=$((100 + level * 20))
+    font_size=$(echo "scale=1; $base_font_size * $zoom_percent / 100" | bc)
+    
+    # Write override config
+    echo "font-size = $font_size" > "$override_file"
+    
+    # Save current level
+    echo "$level" > "$state_file"
+  fi
+  
+  # Trigger Ghostty config reload (Cmd+Shift+,)
+  osascript -e 'tell application "System Events" to keystroke "," using {command down, shift down}' 2>/dev/null
+  
+  # Small delay to let Ghostty apply the new font size
+  sleep 0.1
+  
+  # ANSI color codes
+  local DIM='\033[90m'
+  local BLUE='\033[34m'
+  local BRIGHT_BLUE='\033[94m'
+  local RESET='\033[0m'
+  
+  # ASCII art lines
+  local lines=(
+    '╔══════════════════════════════════════╗'
+    '║  ██████╗ ██╗   ██╗███╗   ██╗███████╗ ║'
+    '║  ██╔══██╗██║   ██║████╗  ██║██╔════╝ ║'
+    '║  ██████╔╝██║   ██║██╔██╗ ██║█████╗   ║'
+    '║  ██╔══██╗██║   ██║██║╚██╗██║██╔══╝   ║'
+    '║  ██║  ██║╚██████╔╝██║ ╚████║███████╗ ║'
+    '║  ╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═══╝╚══════╝ ║'
+    '╚══════════════════════════════════════╝'
+  )
+  local num_lines=${#lines[@]}
+  
+  # Ensure cursor is restored on interrupt
+  trap 'printf "\033[?25h"' INT TERM
+  
+  # Clear screen and hide cursor
+  clear
+  printf '\033[?25l'
+  
+  # Phase 1: Line-by-line reveal in dim color (~240ms)
+  for line in "${lines[@]}"; do
+    printf "${DIM}%s${RESET}\n" "$line"
+    sleep 0.03
+  done
+  
+  # Phase 2: Color pulse - bright blue (~75ms)
+  printf "\033[${num_lines}A"  # Move cursor back up
+  for line in "${lines[@]}"; do
+    printf "${BRIGHT_BLUE}%s${RESET}\n" "$line"
+  done
+  sleep 0.075
+  
+  # Phase 3: Settle to normal blue (~75ms)
+  printf "\033[${num_lines}A"  # Move cursor back up
+  for line in "${lines[@]}"; do
+    printf "${BLUE}%s${RESET}\n" "$line"
+  done
+  sleep 0.075
+  
+  # Show cursor again
+  printf '\033[?25h'
+  trap - INT TERM
+  
+  # Display status
+  echo ""
+  if [[ "$level" -eq 0 ]]; then
+    echo "  Status: OFF"
+    echo "  Zoom:   100% (${base_font_size}pt)"
+  else
+    echo "  Status: ON"
+    echo "  Level:  $level"
+    echo "  Zoom:   ${zoom_percent}% (${font_size}pt)"
+  fi
+}
+
+if command -v wt >/dev/null 2>&1; then
+  eval_cached wt-shell-init wt config shell init zsh \
+    || eval "$(command wt config shell init zsh)"
+  compdef wts=wt
+fi
+
+# claude: Run Claude Code from a trusted scratch dir when launched from $HOME
+# Claude Code never persists trust for the home directory, so a bare `claude`
+# in ~ re-prompts every time. Redirect only an exact-$HOME cwd; any project
+# directory (including one under ~) runs in place.
+export CLAUDE_HOME_DIR="$HOME/scratch"
+claude() {
+  if [[ "$PWD" == "$HOME" ]]; then
+    mkdir -p "$CLAUDE_HOME_DIR"
+    (cd "$CLAUDE_HOME_DIR" && command claude "$@")
+  else
+    command claude "$@"
+  fi
+}
+
+# =============================================================================
+# Starship Prompt (must be at the end)
+# =============================================================================
+
+command -v starship >/dev/null && { eval_cached starship starship init zsh \
+  || eval "$(starship init zsh)"; }
+
+# bun completions
+[ -s "$HOME/.bun/_bun" ] && source "$HOME/.bun/_bun"
+
+# bun
+export BUN_INSTALL="$HOME/.bun"
+export PATH="$BUN_INSTALL/bin:$PATH"
+
+# =============================================================================
+# Stale VIRTUAL_ENV guard (must be after all PATH manipulation)
+# =============================================================================
+# GUI apps (Cursor/VS Code) inherit VIRTUAL_ENV from whatever shell launched
+# them and hand it to every integrated terminal. Each new shell rebuilds PATH
+# from scratch, so the marker outlives the activation: the prompt claims a venv
+# is active while `which python` finds nothing. Drop the marker unless the venv
+# actually belongs to where we are; repair PATH when it does.
+if [[ -n $VIRTUAL_ENV ]]; then
+  if [[ ! -x $VIRTUAL_ENV/bin/python ]]; then
+    unset VIRTUAL_ENV                                     # venv no longer exists
+  elif [[ $VIRTUAL_ENV == "$PWD"/* || $PWD == "${VIRTUAL_ENV:h}"(|/*) ]]; then
+    [[ :$PATH: == *:$VIRTUAL_ENV/bin:* ]] ||
+      export PATH="$VIRTUAL_ENV/bin:$PATH"                # ours, but off PATH
+  else
+    unset VIRTUAL_ENV                                     # leaked from elsewhere
+  fi
+fi
+export PATH="$HOME/.local/bin:$PATH"

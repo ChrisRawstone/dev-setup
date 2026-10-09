@@ -1,0 +1,16 @@
+worktree-path = "{{ repo_path }}/.claude/worktrees/{{ branch | sanitize }}"
+
+[post-start]
+copy_env_files = """
+source_root="{{ primary_worktree_path }}"
+
+for f in .env backend/.env frontend/.env; do
+  src="$source_root/$f"
+  dst="{{ worktree_path }}/$f"
+  # Never overwrite: a project hook may already have copied and extended it.
+  if [ -f "$src" ] && [ ! -f "$dst" ]; then
+    mkdir -p "$(dirname "$dst")"
+    cp "$src" "$dst"
+  fi
+done
+"""
