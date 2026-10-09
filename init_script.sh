@@ -29,9 +29,27 @@ if [[ "$INSTALL_BREW" == true ]]; then
     /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" || exit 1
   fi
   [[ -x /opt/homebrew/bin/brew ]] && eval "$(/opt/homebrew/bin/brew shellenv)"
+  # Apps already installed outside Homebrew (Self Service, App Store, a manual
+  # download) make `brew install --cask` fail with "already an App at ...": skip them.
+  cask_skip=()
+  for cask in $(awk -F'"' '/^cask /{print $2}' "$DOTFILES_DIR/Brewfile"); do
+    brew list --cask "$cask" &>/dev/null && continue
+    for app in ${(f)"$(brew info --cask --json=v2 "$cask" 2>/dev/null | python3 -c '
+import json, sys
+for c in json.load(sys.stdin)["casks"]:
+    for a in c.get("artifacts", []):
+        if isinstance(a, dict) and "app" in a:
+            print(a["app"][0] if isinstance(a["app"][0], str) else a["app"][0].get("target", ""))')"}; do
+      if [[ -n "$app" && ( -e "/Applications/$app" || -e "$HOME/Applications/$app" ) ]]; then
+        echo "  $app is already installed (not via Homebrew), skipping cask $cask"
+        cask_skip+=("$cask")
+      fi
+    done
+  done
   echo "Installing Brewfile packages..."
   # Keep going so configs still get linked, but report the failure at the end
-  brew bundle --file="$DOTFILES_DIR/Brewfile" || BREW_FAILED=true
+  HOMEBREW_BUNDLE_CASK_SKIP="${cask_skip[*]} ${HOMEBREW_BUNDLE_CASK_SKIP:-}" \
+    brew bundle --file="$DOTFILES_DIR/Brewfile" || BREW_FAILED=true
 fi
 
 # Clear Neovim caches/state for a clean reinstall (only with --clean flag)
@@ -207,7 +225,7 @@ for p, on in s.get('enabledPlugins', {}).items():
 
   # herdr plugin
   if command -v herdr >/dev/null && ! herdr plugin list 2>/dev/null | grep -q auto-title; then
-    extra "herdr Auto Title plugin" herdr plugin install kryptamine/herdr-auto-title
+    extra "herdr Auto Title plugin" herdr plugin install kryptamine/herdr-auto-title --yes
   fi
 
   # Azure CLI extensions

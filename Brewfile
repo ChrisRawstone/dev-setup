@@ -51,13 +51,25 @@ brew "databricks/tap/databricks", trusted: true
 # Terraform
 brew "hashicorp/tap/terraform", trusted: true
 cask "font-jetbrains-mono-nerd-font"
-# Developer apps (Office, Teams, Edge, 1Password etc. come from Accenture Self Service)
+# Developer apps (Office, Teams, Edge, Defender, OneDrive come from Accenture Self Service)
 cask "ghostty"
 cask "cursor"
 cask "visual-studio-code"
 cask "claude"
 cask "chatgpt"
 cask "podman-desktop"
+# Everyday apps
+cask "google-chrome"
+cask "firefox"
+cask "1password"
+cask "notion"
+cask "spotify"
+cask "whatsapp"
+cask "libreoffice"
+# Mac App Store (sign in to the App Store first; Xcode is a ~10 GB download)
+brew "mas"
+mas "Xcode", id: 497799835
+mas "1Password for Safari", id: 1569813296
 # Terminal-based web browser
 cask "terminal-browser"
 # Needed by the npm entries below (nvm still manages per-project versions)

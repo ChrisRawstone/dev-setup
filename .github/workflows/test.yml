@@ -62,6 +62,8 @@ jobs:
     env:
       HOMEBREW_NO_AUTO_UPDATE: "1"
       HOMEBREW_NO_INSTALL_CLEANUP: "1"
+      # No Apple ID on CI runners, so App Store (mas) apps can't be tested here
+      HOMEBREW_BUNDLE_MAS_SKIP: "497799835 1569813296"
     steps:
       - uses: actions/checkout@v4
       # Runners ship with Homebrew and ~hundreds of packages; move them away so this
@@ -101,7 +103,8 @@ jobs:
             want=$(wc -l < "${e/code/vscode}/extensions.txt" | tr -d ' ')
             missing=$(comm -23 <(tr A-Z a-z < "${e/code/vscode}/extensions.txt" | sort) <($e --list-extensions | tr A-Z a-z | sort))
             echo "        $e extensions: $((want - $(echo -n "$missing" | grep -c .)))/$want"
-            [ -z "$missing" ] || { echo "$missing" | sed "s/^/MISSING $e extension /"; rc=1; }
+            [ -z "$missing" ] || { echo "$missing" | sed "s/^/MISSING $e extension /"; rc=1
+              for x in $missing; do echo "--- debug: $e --install-extension $x"; $e --install-extension "$x" 2>&1 | tail -5; done; }
           done
           check "claude CLI" "command -v claude"
           check "cursor-agent CLI" "command -v cursor-agent"
@@ -109,6 +112,12 @@ jobs:
             check "claude plugin $p" "claude plugin list | grep -q '${p%@*}'"
           done
           check "codex wrapper (cxstatusline)" "grep -q turn-renderer ~/.local/bin/codex && ~/.local/bin/codex --version"
+          if ! grep -qs turn-renderer ~/.local/bin/codex; then
+            echo "--- debug: ~/.local/bin"; ls -la ~/.local/bin 2>&1
+            echo "--- debug: wrapper"; head -12 ~/.local/bin/codex 2>&1
+            echo "--- debug: cxstatusline install -y"; cxstatusline install -y </dev/null 2>&1 | tail -15
+            echo "--- debug: doctor"; cxstatusline doctor 2>&1 | tail -15
+          fi
           check "skill herdr" "test -f ~/.agents/skills/herdr/SKILL.md"
           check "skill find-skills" "test -f ~/.agents/skills/find-skills/SKILL.md"
           check "skill web-preview (own)" "test -f ~/.claude/skills/web-preview/SKILL.md"
