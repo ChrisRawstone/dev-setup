@@ -64,6 +64,8 @@ jobs:
       HOMEBREW_NO_INSTALL_CLEANUP: "1"
       # No Apple ID on CI runners, so App Store (mas) apps can't be tested here
       HOMEBREW_BUNDLE_MAS_SKIP: "497799835 1569813296"
+      # The personal Macchiato repo is private; build the public upstream to test the same path
+      MACCHIATO_REPO: https://github.com/ObservedObserver/Macchiato.git
     steps:
       - uses: actions/checkout@v4
       # Runners ship with Homebrew and ~hundreds of packages; move them away so this
@@ -122,6 +124,7 @@ jobs:
           check "skill find-skills" "test -f ~/.agents/skills/find-skills/SKILL.md"
           check "skill web-preview (own)" "test -f ~/.claude/skills/web-preview/SKILL.md"
           check "herdr auto-title plugin" "herdr plugin list | grep -q auto-title"
+          check "Macchiato built + installed" "test -x /Applications/Macchiato.app/Contents/MacOS/Macchiato"
           for x in $(cat azure-cli-extensions.txt); do check "az extension $x" "az extension show --name $x"; done
           exit $rc
       - name: Brew summary

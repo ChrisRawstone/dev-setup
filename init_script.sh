@@ -182,6 +182,12 @@ if [[ "$INSTALL_EXTRAS" == true ]]; then
   if command -v cxstatusline >/dev/null && ! grep -qs cxstatusline-wrapper ~/.local/bin/codex; then
     extra "Codex CLI (cxstatusline install)" cxstatusline install -y
   fi
+  # Point the wrapper's renderer at turn-renderer.py (adds the per-turn timer).
+  # `cxstatusline upgrade` regenerates the wrapper; re-run --extras afterwards.
+  if grep -qs cxstatusline-wrapper ~/.local/bin/codex && ! grep -qs turn-renderer ~/.local/bin/codex; then
+    extra "Codex turn timer (patch cxstatusline wrapper)" sed -i '' \
+      "s#^CXSTATUSLINE_COMMAND=.*#CXSTATUSLINE_COMMAND='python3 $HOME/.config/cxstatusline/turn-renderer.py'#" ~/.local/bin/codex
+  fi
 
   # Editor extensions
   for editor in "code:vscode" "cursor:cursor"; do
@@ -226,6 +232,26 @@ for p, on in s.get('enabledPlugins', {}).items():
   # herdr plugin
   if command -v herdr >/dev/null && ! herdr plugin list 2>/dev/null | grep -q auto-title; then
     extra "herdr Auto Title plugin" herdr plugin install kryptamine/herdr-auto-title --yes
+  fi
+
+  # Xcode from the App Store isn't the active developer dir until selected (admin prompt)
+  if [[ -d /Applications/Xcode.app && "$(xcode-select -p 2>/dev/null)" != /Applications/Xcode.app/* ]]; then
+    echo "  Selecting Xcode and accepting its licence (admin prompt)..."
+    sudo xcode-select -s /Applications/Xcode.app/Contents/Developer && sudo xcodebuild -license accept \
+      || EXTRAS_FAILED+=("select Xcode (sudo xcode-select -s /Applications/Xcode.app/Contents/Developer)")
+  fi
+
+  # Macchiato: own fork, built from source (needs Xcode)
+  if [[ ! -d /Applications/Macchiato.app ]]; then
+    if xcodebuild -version &>/dev/null; then
+      src="$HOME/Repos/Macchiato"
+      [[ -d "$src" ]] || extra "clone Macchiato" git clone "${MACCHIATO_REPO:-git@github-chrisrawstone:ChrisRawstone/Macchiato.git}" "$src"
+      extra "build Macchiato" xcodebuild -project "$src/Macchiato.xcodeproj" -scheme Macchiato -configuration Release \
+        -destination 'platform=macOS,arch=arm64' SYMROOT="$src/build" build
+      [[ -d "$src/build/Release/Macchiato.app" ]] && extra "install Macchiato" ditto "$src/build/Release/Macchiato.app" /Applications/Macchiato.app
+    else
+      echo "  skipping Macchiato (needs Xcode; re-run --extras after it's installed)"
+    fi
   fi
 
   # Azure CLI extensions
