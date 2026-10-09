@@ -84,14 +84,17 @@ Anything already at a destination is moved to `<dest>.pre-dotfiles-<timestamp>`,
 # Standard setup (links + renders configs)
 ./init_script.sh
 
-# Also install everything in the Brewfile
+# Also install Homebrew (if missing) and everything in the Brewfile
 ./init_script.sh --brew
 
 # Clean setup (also clears Neovim caches)
 ./init_script.sh --clean
 
-# Pull app-made changes (Claude settings, hooks, Brewfile) back into the repo
+# Pull app-made changes (Claude settings, hooks) back into the repo
 ./sync.sh
+
+# ...and also re-dump the Brewfile from this machine (review the diff: it drops comments)
+./sync.sh --brew
 ```
 
 Not automated: the herdr Auto Title plugin (`herdr plugin install kryptamine/herdr-auto-title`).

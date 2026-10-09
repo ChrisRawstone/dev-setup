@@ -64,14 +64,34 @@ jobs:
       HOMEBREW_NO_INSTALL_CLEANUP: "1"
     steps:
       - uses: actions/checkout@v4
-      # Same command init_script.sh --brew runs; linking is left to check-install.sh,
-      # which needs to see a not-yet-linked home.
-      - name: Install Brewfile
+      # Runners ship with Homebrew and ~hundreds of packages; move them away so this
+      # is a fresh Mac as far as Homebrew is concerned.
+      - name: Remove preinstalled Homebrew
+        run: sudo mv /opt/homebrew /opt/homebrew-preinstalled
+      # Links configs on a home without brew (also checks zsh starts cleanly without it)
+      - name: Check configs
+        run: bash tests/check-install.sh
+      # The real fresh-Mac command: installs Homebrew, then the Brewfile
+      - name: init_script.sh --brew
         id: brew
         continue-on-error: true
+        run: NONINTERACTIVE=1 zsh ./init_script.sh --brew
+      - name: New terminal finds everything
         run: |
-          brew update
-          brew bundle --file=Brewfile
+          # Minimal env, like a fresh Ghostty window: zshrc alone must set up PATH
+          env -i HOME="$HOME" USER="$USER" TERM=xterm-256color PATH=/usr/bin:/bin:/usr/sbin:/sbin \
+            zsh -i -c 'for t in brew node npm nvm wt fd fzf gitleaks cxstatusline starship nvim zellij; do
+                         whence -w $t >/dev/null && echo "ok      $t" || { echo "MISSING $t"; missing=1; }; done
+                       exit ${missing:-0}' 2> "$RUNNER_TEMP/zsh.err"
+          rc=$?
+          if [ -s "$RUNNER_TEMP/zsh.err" ]; then echo "zsh startup errors:"; cat "$RUNNER_TEMP/zsh.err"; rc=1; fi
+          env -i HOME="$HOME" PATH=/opt/homebrew/bin:/usr/bin:/bin python3 -I -c "
+          import importlib.util, os, sys
+          p = os.path.expanduser('~/.config/cxstatusline/turn-renderer.py')
+          s = importlib.util.spec_from_file_location('tr', p); m = importlib.util.module_from_spec(s); s.loader.exec_module(m)
+          print('turn-renderer:', m.NODE, m.RENDERER)
+          sys.exit(0 if os.path.exists(m.NODE) and os.path.exists(m.RENDERER) else 1)" || rc=1
+          exit $rc
       - name: Brew summary
         if: always()
         run: |
@@ -81,8 +101,6 @@ jobs:
           else
             echo '```' >> "$GITHUB_STEP_SUMMARY"; cat "$RUNNER_TEMP/check.log" >> "$GITHUB_STEP_SUMMARY"; echo '```' >> "$GITHUB_STEP_SUMMARY"
           fi
-      - name: Check configs
-        run: bash tests/check-install.sh
       - name: Fail if Brewfile install failed
         if: steps.brew.outcome == 'failure'
         run: |

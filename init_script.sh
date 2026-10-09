@@ -21,6 +21,11 @@ STAMP=$(date +%Y%m%d-%H%M%S)
 echo "Setting up configs from: $DOTFILES_DIR"
 
 if [[ "$INSTALL_BREW" == true ]]; then
+  if ! command -v brew >/dev/null && [[ ! -x /opt/homebrew/bin/brew ]]; then
+    echo "Installing Homebrew (asks for an admin password / elevation)..."
+    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" || exit 1
+  fi
+  [[ -x /opt/homebrew/bin/brew ]] && eval "$(/opt/homebrew/bin/brew shellenv)"
   echo "Installing Brewfile packages..."
   brew bundle --file="$DOTFILES_DIR/Brewfile"
 fi
