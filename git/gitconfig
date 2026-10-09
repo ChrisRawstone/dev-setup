@@ -1,5 +1,12 @@
 [user]
-	email = 52676332+ChrisRawstone@users.noreply.github.com
 	name = Christian Raasteen
+	# email lives in ~/.gitconfig.local (not in this repo)
 [push]
 	autoSetupRemote = true
+[include]
+	path = ~/.gitconfig.local
+# Repos on the personal GitHub account commit with its private noreply address
+[includeIf "hasconfig:remote.*.url:git@github-chrisrawstone:*/**"]
+	path = ~/.gitconfig.personal
+[includeIf "hasconfig:remote.*.url:https://github.com/ChrisRawstone/**"]
+	path = ~/.gitconfig.personal

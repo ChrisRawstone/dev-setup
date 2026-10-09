@@ -138,6 +138,10 @@ render_config "cxstatusline/turn-renderer.py" "$HOME/.config/cxstatusline/turn-r
 
 # Git and SSH (host aliases only; keys never live in this repo)
 link_config "git/gitconfig" "$HOME/.gitconfig"
+link_config "git/gitconfig-personal" "$HOME/.gitconfig.personal"
+if ! git config --file ~/.gitconfig.local user.email &>/dev/null; then
+  echo "  NOTE: no work email set. Run: git config --file ~/.gitconfig.local user.email you@company.com"
+fi
 mkdir -p ~/.ssh && chmod 700 ~/.ssh
 render_config "ssh/config" "$HOME/.ssh/config"
 chmod 600 ~/.ssh/config
@@ -251,6 +255,24 @@ for p, on in s.get('enabledPlugins', {}).items():
       [[ -d "$src/build/Release/Macchiato.app" ]] && extra "install Macchiato" ditto "$src/build/Release/Macchiato.app" /Applications/Macchiato.app
     else
       echo "  skipping Macchiato (needs Xcode; re-run --extras after it's installed)"
+    fi
+  fi
+
+  # AgentsCompare: own VS Code/Cursor extension (not on the Marketplace), built from source
+  ac_targets=()
+  for cli in code cursor; do
+    command -v "$cli" >/dev/null && ! "$cli" --list-extensions 2>/dev/null | grep -qix chrisrawstone.agentscompare \
+      && ac_targets+=("$cli")
+  done
+  if [[ ${#ac_targets[@]} -gt 0 && -z "${SKIP_AGENTSCOMPARE:-}" ]] && command -v npm >/dev/null; then
+    ac="$HOME/Repos/AgentsCompare"
+    [[ -d "$ac" ]] || extra "clone AgentsCompare" git clone "${AGENTSCOMPARE_REPO:-git@github-chrisrawstone:ChrisRawstone/AgentsCompare.git}" "$ac"
+    if [[ -d "$ac" ]]; then
+      extra "build AgentsCompare" bash -c "cd '$ac' && npm ci --no-audit --no-fund && npm run package"
+      vsix=$(ls -t "$ac"/agentscompare-*.vsix 2>/dev/null | head -1)
+      for cli in "${ac_targets[@]}"; do
+        [[ -n "$vsix" ]] && extra "$cli extension AgentsCompare" "$cli" --install-extension "$vsix"
+      done
     fi
   fi
 

@@ -44,6 +44,14 @@ grep -q "$HOME/.claude/turn-timer.sh" ~/.claude/settings.json && pass "rendered 
 python3 -c "import json,os;[json.load(open(os.path.expanduser(f))) for f in ['~/.claude/settings.json','~/.codex/hooks.json','~/.cursor/hooks.json']]" \
   && pass "rendered JSON valid" || fail "rendered JSON invalid"
 
+# Git identity: personal-account repos use the noreply address, others ~/.gitconfig.local
+printf '[user]\n\temail = work@example.com\n' > ~/.gitconfig.local
+gt=$(mktemp -d); git -C "$gt" init -q
+git -C "$gt" remote add origin git@github-chrisrawstone:ChrisRawstone/example.git
+[[ "$(git -C "$gt" config user.email)" == *users.noreply.github.com ]] && pass "personal repos commit with noreply email" || fail "personal repo email: $(git -C "$gt" config user.email)"
+git -C "$gt" remote set-url origin git@ssh.dev.azure.com:v3/org/project/repo
+[[ "$(git -C "$gt" config user.email)" == work@example.com ]] && pass "other repos use ~/.gitconfig.local email" || fail "work repo email: $(git -C "$gt" config user.email)"
+
 echo "== run 2 (idempotence)"
 zsh "$REPO/init_script.sh" > "$LOGS/run2.log" 2>&1
 if grep -qE '^(Linking|Rendering)|backed up' "$LOGS/run2.log"; then

@@ -1,6 +1,7 @@
 # Extensions init_script --extras skips and sync.sh --installed leaves out of the lists.
-# Built locally (not on the Marketplace); install them from their own repo builds:
+# Own extension, built from source and installed by init_script --extras:
 chrisrawstone.agentscompare
+# Built locally (not on the Marketplace); install it from its own build:
 undefined_publisher.compare-branch
 # Cursor's CLI reports success but never installs it (VS Code pulls it in with ms-toolsai.jupyter):
 ms-toolsai.jupyter-keymap

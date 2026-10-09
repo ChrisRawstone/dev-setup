@@ -66,6 +66,8 @@ jobs:
       HOMEBREW_BUNDLE_MAS_SKIP: "497799835 1569813296"
       # The personal Macchiato repo is private; build the public upstream to test the same path
       MACCHIATO_REPO: https://github.com/ObservedObserver/Macchiato.git
+      # AgentsCompare is private and CI has no access to it; its build + install is tested locally
+      SKIP_AGENTSCOMPARE: "1"
     steps:
       - uses: actions/checkout@v4
       # Runners ship with Homebrew and ~hundreds of packages; move them away so this
