@@ -1,0 +1,86 @@
+name: test
+
+# Linux job: every push (cheap). macOS job: only when packages or install scripts change,
+# or when started by hand — macOS minutes count 10x against a private repo's free quota.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      macos:
+        description: Also run the full macOS install (Brewfile)
+        type: boolean
+        default: true
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      install: ${{ steps.diff.outputs.install }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: diff
+        run: |
+          base="${{ github.event.before }}"
+          [ "${{ github.event_name }}" = "pull_request" ] && base="${{ github.event.pull_request.base.sha }}"
+          if git cat-file -e "$base" 2>/dev/null && ! git diff --quiet "$base" HEAD -- Brewfile init_script.sh sync.sh tests/ .github/workflows/; then
+            echo "install=true" >> "$GITHUB_OUTPUT"
+          elif ! git cat-file -e "$base" 2>/dev/null; then
+            echo "install=true" >> "$GITHUB_OUTPUT"   # first push / unknown base
+          fi
+
+  secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update -qq && sudo apt-get install -y -qq zsh jq bc
+      - run: bash tests/check-install.sh
+
+  macos:
+    needs: changes
+    if: >-
+      (github.event_name == 'workflow_dispatch' && inputs.macos) ||
+      (github.event_name != 'workflow_dispatch' && needs.changes.outputs.install == 'true')
+    runs-on: macos-latest   # Apple Silicon (arm64)
+    timeout-minutes: 90
+    env:
+      HOMEBREW_NO_AUTO_UPDATE: "1"
+      HOMEBREW_NO_INSTALL_CLEANUP: "1"
+    steps:
+      - uses: actions/checkout@v4
+      # Same command init_script.sh --brew runs; linking is left to check-install.sh,
+      # which needs to see a not-yet-linked home.
+      - name: Install Brewfile
+        id: brew
+        continue-on-error: true
+        run: |
+          brew update
+          brew bundle --file=Brewfile
+      - name: Brew summary
+        if: always()
+        run: |
+          echo "## Brewfile install" >> "$GITHUB_STEP_SUMMARY"
+          if brew bundle check --file=Brewfile --verbose > check.log 2>&1; then
+            echo "Everything in the Brewfile is installed." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo '```' >> "$GITHUB_STEP_SUMMARY"; cat check.log >> "$GITHUB_STEP_SUMMARY"; echo '```' >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Check configs
+        run: bash tests/check-install.sh
+      - name: Fail if Brewfile install failed
+        if: steps.brew.outcome == 'failure'
+        run: |
+          echo "brew bundle failed; see the 'Install Brewfile' step and the summary." && exit 1
