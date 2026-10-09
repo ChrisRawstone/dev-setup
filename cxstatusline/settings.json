@@ -1,0 +1,249 @@
+{
+  "version": 3,
+  "lines": [
+    [
+      {
+        "id": "1",
+        "type": "model",
+        "color": "hex:a78bfa",
+        "bold": false,
+        "rawValue": true
+      },
+      {
+        "id": "2",
+        "type": "separator",
+        "color": "hex:787d87",
+        "bold": false,
+        "character": " \u00b7 "
+      },
+      {
+        "id": "3",
+        "type": "git-branch",
+        "color": "hex:2dd4bf",
+        "bold": false,
+        "maxWidth": 30
+      },
+      {
+        "id": "4",
+        "type": "separator",
+        "color": "hex:787d87",
+        "bold": false,
+        "character": " \u00b7 "
+      },
+      {
+        "id": "5",
+        "type": "custom-text",
+        "color": "hex:f5a623",
+        "bold": false,
+        "customText": "eff ",
+        "merge": "no-padding"
+      },
+      {
+        "id": "6",
+        "type": "thinking-effort",
+        "color": "hex:f5a623",
+        "bold": false,
+        "rawValue": true
+      },
+      {
+        "id": "7",
+        "type": "separator",
+        "color": "hex:787d87",
+        "bold": false,
+        "character": " \u00b7 "
+      },
+      {
+        "id": "8",
+        "type": "custom-text",
+        "color": "hex:787d87",
+        "bold": false,
+        "customText": "ctx ",
+        "merge": "no-padding"
+      },
+      {
+        "id": "9",
+        "type": "context-percentage",
+        "color": "hex:4ade80",
+        "bold": false,
+        "rawValue": true,
+        "merge": "no-padding"
+      },
+      {
+        "id": "10",
+        "type": "custom-text",
+        "color": "hex:787d87",
+        "bold": false,
+        "customText": " (",
+        "merge": "no-padding"
+      },
+      {
+        "id": "11",
+        "type": "context-length",
+        "color": "hex:e5e7eb",
+        "bold": false,
+        "rawValue": true,
+        "merge": "no-padding"
+      },
+      {
+        "id": "12",
+        "type": "custom-text",
+        "color": "hex:787d87",
+        "bold": false,
+        "customText": "/",
+        "merge": "no-padding"
+      },
+      {
+        "id": "13",
+        "type": "context-window",
+        "color": "hex:787d87",
+        "bold": false,
+        "rawValue": true,
+        "merge": "no-padding"
+      },
+      {
+        "id": "14",
+        "type": "custom-text",
+        "color": "hex:787d87",
+        "bold": false,
+        "customText": ")"
+      }
+    ],
+    [
+      {
+        "id": "15",
+        "type": "five-hour-usage",
+        "color": "hex:4ade80",
+        "bold": false,
+        "metadata": {
+          "hide": "no-data"
+        }
+      },
+      {
+        "id": "16",
+        "type": "custom-text",
+        "color": "hex:787d87",
+        "bold": false,
+        "customText": " \u21ba",
+        "merge": "no-padding",
+        "metadata": {
+          "hide": "merge-target-hidden"
+        }
+      },
+      {
+        "id": "17",
+        "type": "five-hour-reset-timer",
+        "color": "hex:e5e7eb",
+        "bold": false,
+        "rawValue": true,
+        "metadata": {
+          "compact": "true",
+          "hide": "no-data"
+        }
+      },
+      {
+        "id": "18",
+        "type": "separator",
+        "color": "hex:787d87",
+        "bold": false,
+        "character": " \u00b7 "
+      },
+      {
+        "id": "19",
+        "type": "weekly-usage",
+        "color": "hex:4ade80",
+        "bold": false,
+        "metadata": {
+          "hide": "no-data"
+        }
+      },
+      {
+        "id": "20",
+        "type": "custom-text",
+        "color": "hex:787d87",
+        "bold": false,
+        "customText": " \u21ba",
+        "merge": "no-padding",
+        "metadata": {
+          "hide": "merge-target-hidden"
+        }
+      },
+      {
+        "id": "21",
+        "type": "weekly-reset-timer",
+        "color": "hex:e5e7eb",
+        "bold": false,
+        "rawValue": true,
+        "metadata": {
+          "compact": "true",
+          "hide": "no-data"
+        }
+      },
+      {
+        "id": "22",
+        "type": "separator",
+        "color": "hex:787d87",
+        "bold": false,
+        "character": " \u00b7 "
+      },
+      {
+        "id": "23",
+        "type": "custom-text",
+        "color": "hex:60a5fa",
+        "bold": false,
+        "customText": "session ",
+        "merge": "no-padding"
+      },
+      {
+        "id": "24",
+        "type": "session-clock",
+        "color": "hex:60a5fa",
+        "bold": false,
+        "rawValue": true
+      },
+      {
+        "id": "turn-separator",
+        "type": "separator",
+        "color": "hex:787d87",
+        "character": " \u00b7 "
+      },
+      {
+        "id": "turn-timer",
+        "type": "custom-text",
+        "color": "hex:f5a623",
+        "bold": false,
+        "customText": "turn \u2014"
+      },
+      {
+        "id": "25",
+        "type": "separator",
+        "color": "hex:787d87",
+        "bold": false,
+        "character": " \u00b7 "
+      },
+      {
+        "id": "26",
+        "type": "git-changes",
+        "color": "hex:4ade80",
+        "bold": false
+      }
+    ],
+    []
+  ],
+  "colorLevel": 3,
+  "globalBold": false,
+  "defaultSeparator": "",
+  "defaultPadding": "",
+  "powerline": {
+    "enabled": false
+  },
+  "numberFormat": {
+    "token": {
+      "style": "compact",
+      "decimals": 1
+    },
+    "percent": {
+      "style": "whole",
+      "decimals": 0
+    }
+  }
+}

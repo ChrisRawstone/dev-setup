@@ -1,0 +1,3 @@
+prefix_rule(pattern=["python3", "/tmp/update-codex-statusline.py"], decision="allow")
+prefix_rule(pattern=["cxstatusline", "install"], decision="allow")
+prefix_rule(pattern=["cxstatusline", "policy"], decision="allow")

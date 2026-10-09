@@ -1,0 +1,20 @@
+# Base Codex config. Installed only when ~/.codex/config.toml doesn't exist yet;
+# the ChatGPT/Codex app adds its own plugins, MCP servers and project trust entries.
+approval_policy = "on-request"
+approvals_reviewer = "auto_review"
+sandbox_mode = "workspace-write"
+model = "gpt-6.1-sol"
+model_reasoning_effort = "medium"
+service_tier = "default"
+# No Co-authored-by trailer on commits Codex makes.
+developer_instructions = "Do not add Co-authored-by trailers to commits you create."
+
+[features]
+hooks = true
+js_repl = false
+
+[desktop]
+conversationDetailMode = "STEPS_PROSE"
+ambient-suggestions-enabled = true
+external-agent-import-sync-enabled = false
+followUpQueueMode = "queue"

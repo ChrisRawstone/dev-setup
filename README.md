@@ -45,7 +45,9 @@ cd ~/Repos/dev-setup
 # Restart your terminal
 ```
 
-## Symlinks Created
+## What goes where
+
+**Linked** (editing the live file edits the repo):
 
 | Source | Destination |
 |--------|-------------|
@@ -55,18 +57,45 @@ cd ~/Repos/dev-setup
 | `dotfiles/zshrc` | `~/.zshrc` |
 | `starship/starship.toml` | `~/.config/starship.toml` |
 | `worktrunk/config.toml` | `~/.config/worktrunk/config.toml` |
+| `herdr/config.toml` | `~/.config/herdr/config.toml` |
+| `claude/CLAUDE.md`, `statusline.sh`, `turn-timer.sh`, `hooks/` | `~/.claude/` |
+| `codex/herdr-agent-state.sh`, `rules/default.rules` | `~/.codex/` |
+| `cursor/herdr-agent-state.sh` | `~/.cursor/` |
+| `ccstatusline/settings.json`, `cxstatusline/settings.json` | `~/.config/ccstatusline/`, `~/.config/cxstatusline/` |
+
+**Rendered** (copied with `__HOME__` replaced by your home path; the apps rewrite these
+themselves, so run `./sync.sh` to pull their changes back into the repo before committing):
+
+| Source | Destination |
+|--------|-------------|
+| `claude/settings.json` | `~/.claude/settings.json` |
+| `codex/hooks.json` | `~/.codex/hooks.json` |
+| `codex/config.base.toml` | `~/.codex/config.toml` (only if it doesn't exist yet) |
+| `cursor/hooks.json` | `~/.cursor/hooks.json` |
+| `cxstatusline/turn-renderer.py` | `~/.config/cxstatusline/turn-renderer.py` |
+
+Anything already at a destination is moved to `<dest>.pre-dotfiles-<timestamp>`, never deleted.
 
 ## Usage
 
 ### Init Script
 
 ```bash
-# Standard setup (creates symlinks only)
+# Standard setup (links + renders configs)
 ./init_script.sh
+
+# Also install everything in the Brewfile
+./init_script.sh --brew
 
 # Clean setup (also clears Neovim caches)
 ./init_script.sh --clean
+
+# Pull app-made changes (Claude settings, hooks, Brewfile) back into the repo
+./sync.sh
 ```
+
+Not automated: the herdr Auto Title plugin (`herdr plugin install kryptamine/herdr-auto-title`).
+Claude plugins are listed in `claude/settings.json` and get installed on first start.
 
 ### Zellij Sessions
 

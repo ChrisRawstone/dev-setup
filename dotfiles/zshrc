@@ -72,8 +72,10 @@ export CLOUDSDK_CORE_PROJECT="lbf-sb-homeapp-01-prj"
 # =============================================================================
 
 # `brew shellenv` is a ~350ms Ruby/bash spawn; cache its (static) output.
-eval_cached brew-shellenv /opt/homebrew/bin/brew shellenv \
-  || eval "$(/opt/homebrew/bin/brew shellenv)"
+if [ -x /opt/homebrew/bin/brew ]; then
+  eval_cached brew-shellenv /opt/homebrew/bin/brew shellenv \
+    || eval "$(/opt/homebrew/bin/brew shellenv)"
+fi
 
 # =============================================================================
 # Zsh Plugins (sourced directly from Homebrew)
