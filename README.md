@@ -56,11 +56,12 @@ migration (full wipe), but works for any fresh Mac.
    chmod 700 ~/.ssh && chmod 600 ~/.ssh/id_* ~/.ssh/config
    ssh -T git@github-chrisrawstone        # should say: Hi ChrisRawstone!
    ```
-6. **Get this repo:**
+6. **Get this repo** (public, so no keys or login needed):
    ```bash
-   git clone git@github-chrisrawstone:ChrisRawstone/dev-setup.git ~/Repos/dev-setup
+   git clone https://github.com/ChrisRawstone/dev-setup.git ~/Repos/dev-setup
+   git -C ~/Repos/dev-setup remote set-url --push origin git@github-chrisrawstone:ChrisRawstone/dev-setup.git
    ```
-   SSH not working? Use the copy in the backup: `cp -R "$B/dev-setup" ~/Repos/dev-setup`
+   (The second line makes pushes use your SSH key.) No network? Use the backup copy: `cp -R "$B/dev-setup" ~/Repos/dev-setup`
 7. **Get admin, then run everything.** Company Portal → *Promote user to Admin for 10 minutes*,
    then straight away:
    ```bash
