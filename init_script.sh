@@ -272,4 +272,6 @@ if [[ "$BREW_FAILED" == true || ${#EXTRAS_FAILED[@]} -gt 0 ]]; then
   exit 1
 fi
 echo "Setup complete! Restart your terminal or run 'source ~/.zshrc'"
-[[ "$INSTALL_EXTRAS" != true ]] && echo "Run with --extras to install editor extensions, agent CLIs, plugins and skills."
+if [[ "$INSTALL_EXTRAS" != true ]]; then
+  echo "Run with --extras to install editor extensions, agent CLIs, plugins and skills."
+fi
