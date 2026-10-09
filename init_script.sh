@@ -27,7 +27,8 @@ if [[ "$INSTALL_BREW" == true ]]; then
   fi
   [[ -x /opt/homebrew/bin/brew ]] && eval "$(/opt/homebrew/bin/brew shellenv)"
   echo "Installing Brewfile packages..."
-  brew bundle --file="$DOTFILES_DIR/Brewfile"
+  # Keep going so configs still get linked, but report the failure at the end
+  brew bundle --file="$DOTFILES_DIR/Brewfile" || BREW_FAILED=true
 fi
 
 # Clear Neovim caches/state for a clean reinstall (only with --clean flag)
@@ -114,6 +115,10 @@ link_config "ccstatusline/settings.json" "$HOME/.config/ccstatusline/settings.js
 link_config "cxstatusline/settings.json" "$HOME/.config/cxstatusline/settings.json"
 render_config "cxstatusline/turn-renderer.py" "$HOME/.config/cxstatusline/turn-renderer.py"
 
+if [[ "$BREW_FAILED" == true ]]; then
+  echo "Configs linked, but some Brewfile packages FAILED to install (see 'has failed!' above)."
+  exit 1
+fi
 echo "Setup complete! Restart your terminal or run 'source ~/.zshrc'"
 echo "Not covered here: herdr plugin (herdr plugin install kryptamine/herdr-auto-title),"
 echo "Claude plugins (enabled in settings.json; Claude installs them on first start)."

@@ -1,7 +1,7 @@
 tap "databricks/tap"
 tap "hashicorp/tap"
 # Microsoft Azure CLI 2.0
-brew "azure-cli"
+cask "azure-cli"
 # Snapshot testing CLI for Rust
 brew "cargo-insta"
 # Next-generation test runner for Rust
