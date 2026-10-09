@@ -77,6 +77,12 @@
         "source": "github",
         "repo": "max-sixty/worktrunk"
       }
+    },
+    "claude-plugins-official": {
+      "source": {
+        "source": "github",
+        "repo": "anthropics/claude-plugins-official"
+      }
     }
   },
   "feedbackDrafts": "off",

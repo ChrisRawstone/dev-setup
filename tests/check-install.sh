@@ -54,8 +54,8 @@ git -C "$gt" remote set-url origin git@ssh.dev.azure.com:v3/org/project/repo
 
 echo "== run 2 (idempotence)"
 zsh "$REPO/init_script.sh" > "$LOGS/run2.log" 2>&1
-if grep -qE '^(Linking|Rendering)|backed up' "$LOGS/run2.log"; then
-  fail "second run changed things:"; grep -E '^(Linking|Rendering)|backed up' "$LOGS/run2.log"
+if grep -qE '^(Linking|Rendering)|moved existing' "$LOGS/run2.log"; then
+  fail "second run changed things:"; grep -E '^(Linking|Rendering)|moved existing' "$LOGS/run2.log"
 else
   pass "second run is a no-op"
 fi

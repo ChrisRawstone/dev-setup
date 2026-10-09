@@ -10,6 +10,10 @@ brew "cargo-nextest"
 brew "cocogitto"
 # Simplified executable deployment
 brew "dotslash"
+# GitHub CLI (also the clone fallback for private repos)
+brew "gh"
+# JSON processor (Claude statusline)
+brew "jq"
 # Simple, fast and user-friendly alternative to find
 brew "fd"
 # Command-line fuzzy finder written in Go
