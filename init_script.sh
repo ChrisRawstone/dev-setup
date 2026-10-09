@@ -184,6 +184,8 @@ import json, sys
 s = json.load(open(sys.argv[1]))
 if any(p.endswith('@claude-plugins-official') for p in s.get('enabledPlugins', {})):
     print('marketplace', 'anthropics/claude-plugins-official')
+if any(p.endswith('@claude-plugins-official') for p in s.get('enabledPlugins', {})):
+    print('marketplace', 'anthropics/claude-plugins-official')
 for m in s.get('extraKnownMarketplaces', {}).values(): print('marketplace', m['source']['repo'])
 for p, on in s.get('enabledPlugins', {}).items():
     if on: print('plugin', p)" "$DOTFILES_DIR/claude/settings.json" | while read -r kind name; do
