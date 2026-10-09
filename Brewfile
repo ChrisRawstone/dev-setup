@@ -55,7 +55,7 @@ brew "databricks/tap/databricks", trusted: true
 # Terraform
 brew "hashicorp/tap/terraform", trusted: true
 cask "font-jetbrains-mono-nerd-font"
-# Developer apps (Office, Teams, Edge, Defender, OneDrive come from Accenture Self Service)
+# Developer apps (Office, Teams, Edge, Defender install automatically after Intune enrollment; OneDrive via Company Portal)
 cask "ghostty"
 cask "cursor"
 cask "visual-studio-code"

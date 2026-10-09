@@ -105,13 +105,13 @@ if [[ "$INSTALL_BREW" == true ]]; then
     if /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"; then
       ok "Homebrew"
     else
-      failed "Homebrew" "Approve the admin/elevation prompt (Accenture EPM), then re-run with --brew"
+      failed "Homebrew" "Needs admin: Company Portal -> 'Promote user to Admin for 10 minutes', then re-run with --brew"
     fi
   fi
   [[ -x /opt/homebrew/bin/brew ]] && eval "$(/opt/homebrew/bin/brew shellenv)"
 
   if command -v brew >/dev/null; then
-    # Apps already installed outside Homebrew (Self Service, App Store, a manual
+    # Apps already installed outside Homebrew (Company Portal, App Store, a manual
     # download) make `brew install --cask` fail with "already an App at ...": skip them.
     cask_skip=()
     for cask in $(awk -F'"' '/^cask /{print $2}' "$DOTFILES_DIR/Brewfile"); do
@@ -130,6 +130,14 @@ for c in json.load(sys.stdin)["casks"]:
       done
     done
 
+    # Without admin rights /Applications isn't writable: put apps in ~/Applications instead.
+    # They work the same, and update themselves without elevation prompts.
+    if [[ ! -w /Applications || -n "${DEV_SETUP_USER_APPDIR:-}" ]]; then
+      mkdir -p ~/Applications
+      export HOMEBREW_CASK_OPTS="--appdir=$HOME/Applications ${HOMEBREW_CASK_OPTS:-}"
+      echo "  No write access to /Applications (not admin right now): installing apps to ~/Applications"
+      ok "Apps installed to ~/Applications (no admin rights needed)"
+    fi
     echo "Installing Brewfile packages..."
     HOMEBREW_BUNDLE_CASK_SKIP="${cask_skip[*]} ${HOMEBREW_BUNDLE_CASK_SKIP:-}" \
       brew bundle --file="$DOTFILES_DIR/Brewfile"
@@ -153,6 +161,9 @@ for c in json.load(sys.stdin)["casks"]:
       (( n_missing++ ))
     done <<< "$missing"
     ok "Brewfile: $(( total - n_missing - ${#cask_skip[@]} )) of $total entries installed or up to date"
+    if [[ -d ~/Applications/1Password.app && ! -d /Applications/1Password.app ]]; then
+      todo "1Password's browser extension wants the app in /Applications: during an admin window, drag ~/Applications/1Password.app there"
+    fi
   fi
 fi
 
@@ -374,12 +385,13 @@ for p, on in s.get('enabledPlugins', {}).items():
     if sudo xcode-select -s /Applications/Xcode.app/Contents/Developer && sudo xcodebuild -license accept; then
       ok "Xcode selected as developer directory"
     else
-      failed "select Xcode" "sudo xcode-select -s /Applications/Xcode.app/Contents/Developer && sudo xcodebuild -license accept"
+      failed "select Xcode" "Get admin (Company Portal -> Promote user to Admin), then: sudo xcode-select -s /Applications/Xcode.app/Contents/Developer && sudo xcodebuild -license accept"
     fi
   fi
 
   # Macchiato: own fork, built from source (needs Xcode)
-  if [[ -d /Applications/Macchiato.app ]]; then
+  app_dir=/Applications; [[ -w /Applications && -z "${DEV_SETUP_USER_APPDIR:-}" ]] || app_dir="$HOME/Applications"
+  if [[ -d /Applications/Macchiato.app || -d ~/Applications/Macchiato.app ]]; then
     skipped "Macchiato"
   elif xcodebuild -version &>/dev/null; then
     src="$HOME/Repos/Macchiato"
@@ -387,8 +399,8 @@ for p, on in s.get('enabledPlugins', {}).items():
       extra "build Macchiato" "Open ~/Repos/Macchiato/Macchiato.xcodeproj in Xcode and build (Xcode may need to finish installing components)" \
         xcodebuild -project "$src/Macchiato.xcodeproj" -scheme Macchiato -configuration Release \
         -destination 'platform=macOS,arch=arm64' SYMROOT="$src/build" build \
-      && extra "install Macchiato" "ditto ~/Repos/Macchiato/build/Release/Macchiato.app /Applications/Macchiato.app" \
-        ditto "$src/build/Release/Macchiato.app" /Applications/Macchiato.app
+      && extra "install Macchiato" "ditto ~/Repos/Macchiato/build/Release/Macchiato.app $app_dir/Macchiato.app" \
+        ditto "$src/build/Release/Macchiato.app" "$app_dir/Macchiato.app"
     fi
   else
     todo "Macchiato needs Xcode: once Xcode is installed (App Store), re-run './init_script.sh --extras'. Or unzip Macchiato.app.zip from the backup"

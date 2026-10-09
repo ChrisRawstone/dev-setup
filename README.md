@@ -6,47 +6,78 @@ way it was, and tells you at the end what worked, what didn't, and how to fix it
 
 ## New Mac: step by step
 
-Do these in order; each step unblocks the next.
+Do these in order; each step unblocks the next. Written for the Accenture Jamf → Intune
+migration (full wipe), but works for any fresh Mac.
 
-**Before wiping the old Mac**
+> **Never let a script or AI move files into or out of OneDrive.** Accenture's malware
+> protection flags it and can cut your internet. Scripts here only touch local folders;
+> every OneDrive copy below is a drag in Finder.
 
-1. Run the backup: `bash ~/scratch/mac-migration/backup.sh` (writes `~/Desktop/MacMigration-<date>/`).
-2. Wait until OneDrive says *Up to date*, and spot-check the folder on onedrive.com.
-3. Push any git work you want to keep (only pushed commits come back).
-4. Have your 1Password Secret Key (Emergency Kit), or your phone with 1Password on it.
+### Before the wipe (old Mac)
 
-**On the new Mac**
+1. **Push your git work.** Only pushed commits come back. Check every repo for unpushed
+   commits, stashes and uncommitted changes, including worktrees.
+2. **Run the backup:** `bash ~/scratch/mac-migration/backup.sh`. It writes
+   `~/MacMigration-<date>/` locally: personal files, tokens, Claude/Codex/Cursor history,
+   `.env` files, app lists. Then **drag that folder into OneDrive in Finder.**
+3. **Downloads and other local files** aren't in OneDrive's automatic backup (only Desktop
+   and Documents are). Drag what you need into OneDrive, e.g. a `Downloads Backup` folder.
+4. **Secrets into 1Password** (IT's recommendation): SSH keys (`~/.ssh/id_*`), tokens and
+   `.env` files. The backup has them too, but 1Password is the safer copy.
+5. **1Password Emergency Kit** (Secret Key) saved, or 1Password logged in on your phone.
+   The account password alone isn't enough on a new Mac.
+6. **Browsers:** turn on sync (Chrome, Firefox) or export bookmarks; passwords into 1Password.
+7. **Apple Notes:** notes under *On My Mac* aren't synced anywhere. Move them to iCloud or export them.
+8. **Wait until OneDrive says *Your files are synced*,** then spot-check on onedrive.com.
+9. **Sign out of iCloud** (System Settings → your name → Sign Out). Otherwise the Mac is
+   locked (Activation Lock) after the wipe.
 
-1. **Accenture setup.** Sign in with SSO, finish Company Portal enrollment, and install
-   Office, Teams, Edge etc. from Self Service. (This repo doesn't install managed apps.)
-2. **OneDrive.** Sign in and let `Desktop/MacMigration-<date>` sync down.
-3. **App Store.** Open it and sign in, so Xcode and 1Password for Safari can install later.
+### Migration day
+
+1. **Be at home**: Accenture Wi-Fi only works after the initial setup.
+2. Run **Intune Migration** in *My Accenture Mac*. Not there? Email va.support@accenture.com
+   ("I can't see the Intune Migration icon"), or contact Jens Nielsen.
+3. After the wipe choose **Reinstall macOS Tahoe** if offered. Stuck on *Choose Startup
+   Disk*? Recovery mode helps.
+4. Set up with your **Enterprise ID** (xyz@accenture.com), enroll in Intune and register PSSO,
+   all in the same session. Then wait for the mandatory downloads (Office, Teams, Defender...).
+
+### On the new Mac
+
+1. **Company Portal:** sign in. Install OneDrive from there if it isn't on the Mac yet.
+2. **OneDrive:** sign in, then **in Finder** drag `MacMigration-<date>` from OneDrive to your
+   home folder, plus anything else you parked there (Downloads Backup...).
+3. **App Store:** sign in, so Xcode and 1Password for Safari can install.
 4. **Command line tools** (gives you `git`). In Terminal: `xcode-select --install`
-5. **Restore personal files from the backup** (SSH keys, tokens, Claude/Codex history, work git email):
+5. **Restore personal files** (SSH keys, tokens, Claude/Codex history, work git email):
    ```bash
-   B=$(ls -d ~/Desktop/MacMigration-* | tail -1)
+   B=$(ls -d ~/MacMigration-* | tail -1)
    tar -xzf "$B/configs/home-configs.tar.gz" -C ~
    chmod 700 ~/.ssh && chmod 600 ~/.ssh/id_* ~/.ssh/config
    ssh -T git@github-chrisrawstone        # should say: Hi ChrisRawstone!
    ```
-6. **Get this repo.**
+6. **Get this repo:**
    ```bash
    git clone git@github-chrisrawstone:ChrisRawstone/dev-setup.git ~/Repos/dev-setup
    ```
-   SSH not working? Use the copy in the backup instead: `cp -R "$B/dev-setup" ~/Repos/dev-setup`
-7. **Run everything** (20–40 min; approve the admin/elevation prompt for Homebrew):
+   SSH not working? Use the copy in the backup: `cp -R "$B/dev-setup" ~/Repos/dev-setup`
+7. **Get admin, then run everything.** Company Portal → *Promote user to Admin for 10 minutes*,
+   then straight away:
    ```bash
    ~/Repos/dev-setup/init_script.sh --all
    ```
-8. **Read the recap at the end.** Every failure comes with a suggested fix. Fix, then run the
-   same command again: finished steps are skipped, so re-running is cheap. The full output is
-   saved to `~/.local/state/dev-setup/init-<time>.log`.
-9. **When Xcode has finished downloading** (it's ~10 GB), run `~/Repos/dev-setup/init_script.sh --extras`
-   once more: it selects Xcode (admin prompt) and builds Macchiato.
+   Homebrew's installer needs admin at the start; the rest doesn't. If you aren't admin
+   when the apps install, they go to `~/Applications` (they work the same, and update
+   themselves without elevation prompts). Takes 20–40 minutes.
+8. **Read the recap at the end.** Every failure has a suggested fix. Fix it, then run the same
+   command again: finished steps are skipped. Full output: `~/.local/state/dev-setup/init-<time>.log`.
+9. **When Xcode has finished downloading** (~10 GB): get admin again, then
+   `~/Repos/dev-setup/init_script.sh --extras`. It selects Xcode and builds Macchiato.
 10. **Open a new Ghostty window** and do the sign-ins the recap lists (Claude Code, Cursor,
-    ChatGPT, 1Password, Chrome sync, Notion, `gh auth login`, `az login`).
+    ChatGPT, 1Password, Chrome/Firefox sync, Notion, `gh auth login`, `az login`). Sign in to
+    iCloud again if you use it.
 11. **Your other repos and their `.env` files:** ask Claude Code to follow `RESTORE.md` (Phase 3)
-    in the backup folder.
+    in `~/MacMigration-<date>`.
 
 ## What the script does
 
@@ -60,7 +91,7 @@ Do these in order; each step unblocks the next.
 
 **Fallbacks built in**
 
-- Already-installed apps (from Self Service, the App Store or a manual download) are detected and skipped instead of breaking the Homebrew run.
+- Already-installed apps (from Company Portal, the App Store or a manual download) are detected and skipped instead of breaking the Homebrew run.
 - Private repos (Macchiato, AgentsCompare) clone over SSH, and fall back to the GitHub CLI (`gh auth login`) if SSH isn't set up yet.
 - A failing step never stops the rest: everything else still installs, and the recap lists what failed.
 - Existing files are never deleted: anything replaced is moved to `<file>.pre-dotfiles-<time>`. If an app had changed one of its config files, the recap tells you and how to keep those changes.
@@ -70,7 +101,7 @@ Do these in order; each step unblocks the next.
 
 | Symptom | Fix |
 |---------|-----|
-| Homebrew install stops at an admin prompt | Approve it in PrivilegeManagement (Accenture EPM), re-run. |
+| Homebrew: "Need sudo access" / admin prompt | Company Portal → *Promote user to Admin for 10 minutes*, then re-run. |
 | `clone ChrisRawstone/...` failed | Step 5 not done (SSH keys), or run `gh auth login`; re-run `--extras`. |
 | Xcode / 1Password for Safari not installed | Sign in to the App Store, re-run `--brew`. |
 | Macchiato "needs Xcode" | Wait for Xcode, re-run `--extras`. Quick fallback: unzip `macchiato/Macchiato.app.zip` from the backup, then `xattr -dr com.apple.quarantine /Applications/Macchiato.app`. |

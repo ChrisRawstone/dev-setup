@@ -68,6 +68,8 @@ jobs:
       MACCHIATO_REPO: https://github.com/ObservedObserver/Macchiato.git
       # AgentsCompare is private and CI has no access to it; its build + install is tested locally
       SKIP_AGENTSCOMPARE: "1"
+      # Behave like a non-admin user (the real Mac): apps go to ~/Applications
+      DEV_SETUP_USER_APPDIR: "1"
     steps:
       - uses: actions/checkout@v4
       # Runners ship with Homebrew and ~hundreds of packages; move them away so this
@@ -126,7 +128,8 @@ jobs:
           check "skill find-skills" "test -f ~/.agents/skills/find-skills/SKILL.md"
           check "skill web-preview (own)" "test -f ~/.claude/skills/web-preview/SKILL.md"
           check "herdr auto-title plugin" "herdr plugin list | grep -q auto-title"
-          check "Macchiato built + installed" "test -x /Applications/Macchiato.app/Contents/MacOS/Macchiato"
+          check "Macchiato built + installed" "test -x ~/Applications/Macchiato.app/Contents/MacOS/Macchiato"
+          check "apps in ~/Applications (non-admin mode)" "test -d ~/Applications/Ghostty.app -a -d ~/Applications/Cursor.app"
           for x in $(cat azure-cli-extensions.txt); do check "az extension $x" "az extension show --name $x"; done
           exit $rc
       - name: Brew summary
