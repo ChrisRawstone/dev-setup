@@ -69,6 +69,14 @@ if [[ $rc -eq 0 && -n "$out" ]]; then
 else
   fail "statusline rc=$rc: $out"
 fi
+if command -v cxstatusline >/dev/null; then
+  python3 -I -c "
+import importlib.util, os, sys
+p = os.path.expanduser('~/.config/cxstatusline/turn-renderer.py')
+s = importlib.util.spec_from_file_location('tr', p); m = importlib.util.module_from_spec(s); s.loader.exec_module(m)
+sys.exit(0 if os.path.exists(m.NODE) and os.path.exists(m.RENDERER) else 1)" \
+    && pass "Codex statusline finds cxstatusline + node" || fail "turn-renderer.py can't find cxstatusline/node"
+fi
 echo '{"session_id":"t1"}' | ~/.claude/turn-timer.sh start && echo '{"session_id":"t1"}' | ~/.claude/turn-timer.sh stop \
   && pass "turn-timer start/stop" || fail "turn-timer"
 

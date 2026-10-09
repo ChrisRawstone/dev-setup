@@ -4,12 +4,28 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 import time
 
-NODE = '__HOME__/.nvm/versions/node/v24.19.0/bin/node'
-RENDERER = '__HOME__/.nvm/versions/node/v24.19.0/lib/node_modules/cxstatusline/dist/cxstatusline.js'
+def find_renderer():
+    """Locate cxstatusline's JS entry and a node to run it, wherever npm put them
+    (Homebrew's node or any nvm version). The node next to the package wins."""
+    candidates = []
+    binary = shutil.which('cxstatusline')
+    if binary:
+        candidates.append(Path(os.path.realpath(binary)).parent / 'cxstatusline.js')
+    candidates += sorted(Path('__HOME__/.nvm/versions/node').glob('*/lib/node_modules/cxstatusline/dist/cxstatusline.js'), reverse=True)
+    candidates.append(Path('/opt/homebrew/lib/node_modules/cxstatusline/dist/cxstatusline.js'))
+    for js in candidates:
+        if js.is_file():
+            # <prefix>/lib/node_modules/cxstatusline/dist/cxstatusline.js -> <prefix>/bin/node
+            node = js.parents[4] / 'bin' / 'node'
+            return str(node if node.exists() else (shutil.which('node') or 'node')), str(js)
+    return shutil.which('node') or 'node', str(candidates[-1])
+
+NODE, RENDERER = find_renderer()
 STATE_ROOT = Path('__HOME__/.local/state/cxstatusline/turn-timers')
 PLACEHOLDER = 'turn —'
 

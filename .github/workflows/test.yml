@@ -47,6 +47,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: sudo apt-get update -qq && sudo apt-get install -y -qq zsh jq bc
+      # Ubuntu ships group-writable zsh function dirs; compinit then refuses them
+      # and tries to prompt. That's a runner quirk, not a config problem.
+      - run: zsh -c 'autoload -Uz compaudit; compaudit' | xargs -r sudo chmod g-w,o-w
       - run: bash tests/check-install.sh
 
   macos:
@@ -73,10 +76,10 @@ jobs:
         if: always()
         run: |
           echo "## Brewfile install" >> "$GITHUB_STEP_SUMMARY"
-          if brew bundle check --file=Brewfile --verbose > check.log 2>&1; then
+          if brew bundle check --file=Brewfile --verbose > "$RUNNER_TEMP/check.log" 2>&1; then
             echo "Everything in the Brewfile is installed." >> "$GITHUB_STEP_SUMMARY"
           else
-            echo '```' >> "$GITHUB_STEP_SUMMARY"; cat check.log >> "$GITHUB_STEP_SUMMARY"; echo '```' >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"; cat "$RUNNER_TEMP/check.log" >> "$GITHUB_STEP_SUMMARY"; echo '```' >> "$GITHUB_STEP_SUMMARY"
           fi
       - name: Check configs
         run: bash tests/check-install.sh

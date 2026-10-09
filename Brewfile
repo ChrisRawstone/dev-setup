@@ -60,6 +60,8 @@ cask "chatgpt"
 cask "podman-desktop"
 # Terminal-based web browser
 cask "terminal-browser"
+# Needed by the npm entries below (nvm still manages per-project versions)
+brew "node"
 uv "prek"
 npm "corepack"
 npm "cxstatusline"
