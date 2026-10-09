@@ -1,0 +1,2 @@
+herdrdev/herdr herdr
+vercel-labs/skills find-skills

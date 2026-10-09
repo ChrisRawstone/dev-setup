@@ -1,0 +1,105 @@
+#!/usr/bin/env bash
+# Run a web app's dev server and show the app beside the calling Herdr pane:
+#
+#   ┌──────────────┬───────────┐
+#   │              │ web logs  │
+#   │  caller      ├───────────┤
+#   │  (agent)     │  browser  │
+#   │              │           │
+#   └──────────────┴───────────┘
+#
+# Usage: web-preview --cmd "<dev server command>" --url <url|port> [--cwd <dir>]
+#        web-preview --stop
+# Prints JSON with the pane ids and the browser's CDP port. Run again to reuse the panes.
+set -euo pipefail
+
+cmd="" url="" cwd="$PWD" stop=false
+while [[ $# -gt 0 ]]; do
+	case "$1" in
+	--cmd) cmd="$2"; shift 2 ;;
+	--url) url="$2"; shift 2 ;;
+	--cwd) cwd="$2"; shift 2 ;;
+	--stop) stop=true; shift ;;
+	-h | --help) sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+	*) echo "web-preview: unknown argument $1" >&2; exit 2 ;;
+	esac
+done
+
+if [[ "${HERDR_ENV:-}" != 1 ]]; then
+	echo "web-preview: not inside a Herdr pane" >&2
+	exit 1
+fi
+
+LOGS_LABEL="web logs"
+BROWSER_LABEL="browser"
+json() { python3 -c "import json,sys; d=json.load(sys.stdin); print($1)"; }
+
+# The panes this script made earlier in the caller's tab, found by label.
+find_pane() {
+	herdr pane list --workspace "$HERDR_WORKSPACE_ID" | python3 -c '
+import json, sys
+label, tab = sys.argv[1], sys.argv[2]
+for p in json.load(sys.stdin)["result"]["panes"]:
+    if p.get("label") == label and p["tab_id"] == tab:
+        print(p["pane_id"]); break
+' "$1" "$HERDR_TAB_ID"
+}
+
+logs=$(find_pane "$LOGS_LABEL")
+browser=$(find_pane "$BROWSER_LABEL")
+
+if $stop; then
+	[[ -n "$logs" ]] && herdr pane send-keys "$logs" ctrl+c >/dev/null && sleep 1 && herdr pane close "$logs" >/dev/null
+	[[ -n "$browser" ]] && herdr pane close "$browser" >/dev/null
+	echo '{"stopped": true}'
+	exit 0
+fi
+
+if [[ -z "$cmd" || -z "$url" ]]; then
+	echo "web-preview: --cmd and --url are required" >&2
+	exit 2
+fi
+[[ "$url" =~ ^[0-9]+$ ]] && url="http://localhost:$url"
+[[ "$url" =~ ^https?:// ]] || url="http://$url"
+
+up() { curl -s -o /dev/null -m 2 -w '%{http_code}' "$url" | grep -qv '^000$'; }
+
+# The logs pane: to the right of the caller, keeping 60% for the caller.
+if [[ -z "$logs" ]]; then
+	logs=$(herdr pane split --current --direction right --ratio 0.6 --cwd "$cwd" --no-focus |
+		json 'd["result"]["pane"]["pane_id"]')
+	herdr pane rename "$logs" "$LOGS_LABEL" >/dev/null
+fi
+# The browser pane: under the logs, which keep the top fifth.
+if [[ -z "$browser" ]]; then
+	browser=$(herdr pane split "$logs" --direction down --ratio 0.2 --cwd "$cwd" --no-focus |
+		json 'd["result"]["pane"]["pane_id"]')
+	herdr pane rename "$browser" "$BROWSER_LABEL" >/dev/null
+fi
+
+if ! up; then
+	herdr pane run "$logs" "$cmd" >/dev/null
+	for _ in $(seq 180); do up && break; sleep 1; done
+	up || { echo "web-preview: $url did not answer within 3 minutes; see pane $logs" >&2; exit 1; }
+fi
+
+cdp_port() {
+	terminal-browser ls --all --json | python3 -c '
+import json, sys
+for b in json.load(sys.stdin)["browsers"]:
+    if (b.get("pane") or {}).get("pane") == sys.argv[1]:
+        print(b["cdpPort"]); break
+' "$browser"
+}
+
+port=$(cdp_port)
+if [[ -z "$port" ]]; then
+	herdr pane run "$browser" "terminal-browser open '$url'" >/dev/null
+	for _ in $(seq 30); do port=$(cdp_port); [[ -n "$port" ]] && break; sleep 1; done
+	[[ -n "$port" ]] || { echo "web-preview: the browser did not start; see pane $browser" >&2; exit 1; }
+else
+	"$(dirname "$0")/ab" open "$url" >/dev/null
+fi
+
+printf '{"url": "%s", "logs_pane": "%s", "browser_pane": "%s", "cdp_port": %s}\n' \
+	"$url" "$logs" "$browser" "$port"

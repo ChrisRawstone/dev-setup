@@ -1,0 +1,13 @@
+Host ssh.dev.azure.com
+    IdentityFile ~/.ssh/id_rsa_azuredevops
+    IdentitiesOnly yes
+
+Host github.com
+    IdentityFile ~/.ssh/id_ed25519_gh_halfspace
+    IdentitiesOnly yes
+
+Host github-chrisrawstone
+    HostName github.com
+    User git
+    IdentityFile ~/.ssh/id_ed25519_chrisrawstone
+    IdentitiesOnly yes

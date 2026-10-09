@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+# agent-browser, attached to the terminal-browser in this Herdr tab's "browser" pane.
+# `terminal-browser action` cannot reach its own agent-browser (0.13.4), so this calls the
+# binary that terminal-browser bundles directly over CDP. Every terminal-browser shares one
+# Chromium and one CDP port, so it first switches to the tab shown in that pane.
+#
+# Usage: ab <agent-browser command>   e.g. ab snapshot -i | ab click @e3 | ab screenshot out.png
+#        AB_PANE=<herdr pane id> ab …  to drive the browser in another pane
+set -euo pipefail
+
+bin=$(ls -d "$(brew --prefix)"/Caskroom/terminal-browser/*/terminal-browser/agent-browser/bin/agent-browser 2>/dev/null |
+	sort -V | tail -1)
+[[ -x "$bin" ]] || bin=$(command -v agent-browser) || { echo "ab: no agent-browser found" >&2; exit 1; }
+
+pane=${AB_PANE:-$(herdr pane list --workspace "$HERDR_WORKSPACE_ID" | python3 -c '
+import json, os, sys
+for p in json.load(sys.stdin)["result"]["panes"]:
+    if p.get("label") == "browser" and p["tab_id"] == os.environ["HERDR_TAB_ID"]:
+        print(p["pane_id"]); break
+')}
+
+# "<cdp port> <url of the tab the pane shows>"
+read -r port url < <(terminal-browser ls --all --json | python3 -c '
+import json, sys
+pane = sys.argv[1]
+browsers = json.load(sys.stdin)["browsers"]
+mine = [b for b in browsers if (b.get("pane") or {}).get("pane") == pane] or browsers[:1]
+for b in mine:
+    tab = next((t for t in b["tabs"] if t.get("active")), b["tabs"][0])
+    print(b["cdpPort"], tab["url"])
+' "$pane") || { echo "ab: no terminal-browser is open; run web-preview first" >&2; exit 1; }
+
+# Switch to that tab when the shared browser has several. Only when it is not already the active
+# one ("→"): switching drops the @refs of the last snapshot.
+tab=$("$bin" --cdp "$port" tab list | python3 -c '
+import re, sys
+for line in sys.stdin:
+    m = re.match(r"(\W*)\[(t\d+)\].* - (\S+)$", line.rstrip())
+    if m and m.group(3) == sys.argv[1]:
+        if "→" not in m.group(1): print(m.group(2))
+        break
+' "$url")
+[[ -n "$tab" ]] && "$bin" --cdp "$port" tab "$tab" >/dev/null
+
+exec "$bin" --cdp "$port" "$@"

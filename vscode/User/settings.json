@@ -1,0 +1,128 @@
+{
+    "terminal.integrated.enableImages": true,
+    "terminal.integrated.inheritEnv": false,
+    "explorer.confirmDelete": false,
+    "explorer.confirmDragAndDrop": false,
+    "notebook.output.wordWrap": true,
+    "terminal.integrated.enableMultiLinePasteWarning": false,
+    "git.openRepositoryInParentFolders": "never",
+    "security.workspace.trust.untrustedFiles": "open",
+    "editor.minimap.enabled": false,
+    "git.autofetch": true,
+    "git.confirmSync": false,
+    "explorer.confirmPasteNative": false,
+    "liveServer.settings.donotShowInfoMsg": true,
+    "liveServer.settings.donotVerifyTags": true,
+    "javascript.updateImportsOnFileMove.enabled": "never",
+    
+    "cssNavigation.enableClassNameDefinitionDiagnostic": true,
+    "cssNavigation.enableClassNameReferenceDiagnostic": true,
+    "cssNavigation.enableDefinitionCodeLens": true,
+    "cssNavigation.enableReferenceCodeLens": true,
+    "editor.codeLens": true,
+
+    "github.copilot.enable": {
+        "*": true,
+        "plaintext": false,
+        "markdown": true,
+        "scminput": false,
+        "*.txt" : false,
+    },
+    "github.copilot.editor.enableAutoCompletions": true,
+    "github.copilot.advanced": {
+
+
+    },
+"remote.extensionKind": {
+    "GitHub.copilot": ["ui"],
+    "GitHub.copilot-chat": ["ui"]
+},
+    "chat.editing.alwaysSaveWithGeneratedChanges": true,
+    "chat.tools.autoApprove" : true,
+    "jupyter.interactiveWindow.creationMode": "perFile",
+    "github.copilot.chat.codesearch.enabled": true,
+    "github.copilot.chat.agent.thinkingTool": true,
+    // "github.copilot.chat.codeGeneration.instructions": [
+
+    //     { "text": "Always write clean and simple code. Try to avoid using try, except statements. Remember I am using UV as package manager. Please run the code yourself afterwards and fix any issues afterwards that might come from running that code." }
+    // ],
+    "liveshare.anonymousGuestApproval": "accept",
+    "github.copilot.nextEditSuggestions.enabled": true,
+    "parquet-viewer.format": "csv",
+    "workbench.editorAssociations": {
+        "*.copilotmd": "vscode.markdown.preview.editor",
+        "file:/**/*.csv": "jupyter-data-wrangler"
+    },
+    "diffEditor.ignoreTrimWhitespace": true,
+    // Show git/source-control diffs as one inline (unified) file instead of two panels.
+    "diffEditor.renderSideBySide": false,
+    // When only part of a line changed, show it within the same line (Cursor-style)
+    // instead of duplicating the whole line as removed + added.
+    "diffEditor.experimental.useTrueInlineView": true,
+    // Always render the whole file in a diff, never collapse untouched regions.
+    "diffEditor.hideUnchangedRegions.enabled": false,
+    "CSSNavigation.activeCSSFileExtensions": [
+        "css",
+        "scss",
+        "sass",
+        "less",
+        "js"
+    ],
+    "CSSNavigation.enableClassNameDefinitionDiagnostic": true,
+    "CSSNavigation.enableDefinitionCodeLens": true,
+    "CSSNavigation.enableReferenceCodeLens": true,
+    "CSSNavigation.searchAcrossWorkspaceFolders": true,
+    "editor.definitionLinkOpensInPeek": true,
+    "editor.stablePeek": true,
+    "chat.agent.maxRequests": 50,
+    "javascript.preferGoToSourceDefinition": true,
+    "terminal.integrated.altClickMovesCursor": false,
+    "chat.editing.confirmEditRequestRemoval": false,
+    "workbench.iconTheme": "material-icon-theme",
+    "python.defaultInterpreterPath": "C:\\Users\\Rawstone\\AppData\\Local\\Programs\\Python\\Python39\\python.exe",
+    "python.analysis.typeCheckingMode": "strict",
+    "chat.tools.urls.autoApprove": {
+        "https://github.com/wojtekmaj/react-pdf/releases": {
+            "approveRequest": false,
+            "approveResponse": true
+        },
+        "https://github.com/wojtekmaj/react-pdf/issues/1869": true,
+        "https://github.com/wojtekmaj/react-pdf/issues": true,
+        "https://github.com/wojtekmaj/react-pdf": true,
+        "https://github.com/wojtekmaj": true,
+        "https://github.com": true,
+        "https://github.com/wojtekmaj/react-pdf/discussions/1836": true,
+        "https://github.com/wojtekmaj/react-pdf/discussions": true,
+        "https://*.visualstudio.com": true,
+        "https://*.stripe.com": true
+    },
+
+    "material-icon-theme.folders.associations": {
+        
+        "file_storage" : "layout",
+        "alembic" : "database",
+        "document_intelligence" : "layout",
+        "0_quick_testing" : "test",
+        "extractors" : "shared",
+        "evaluation" : "prisma",
+        "evaluation_data" : "prisma"
+
+    },
+    "claudeCode.preferredLocation": "panel",
+    "remote.autoForwardPortsSource": "hybrid",
+    "claudeCode.allowDangerouslySkipPermissions": true,
+    "claudeCode.disableLoginPrompt": true,
+    "extensions.ignoreRecommendations": true,
+    "claude-history.database.storeMessages": true,
+    "workbench.colorTheme": "Light Modern",
+    "security.promptForLocalFileProtocolHandling": false,
+    "vscode-office.openOutline": false,
+    "github.copilot.nextEditSuggestions.eagerness": "auto",
+    "files.autoSave": "afterDelay",
+    "editor.accessibilitySupport": "on",
+    // Activate venvs during shell startup instead of pasting `source .../activate`
+    // into the terminal a second after the prompt appears (which overwrites typing).
+    "python-envs.terminal.autoActivationType": "shellStartup",
+    "python.terminal.useEnvFile": true,
+    "svelte.enable-ts-plugin": true
+}

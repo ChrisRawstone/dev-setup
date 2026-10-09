@@ -34,12 +34,13 @@ links=$(grep -c '^Linking' "$LOGS/run1.log")
 renders=$(grep -c '^Rendering' "$LOGS/run1.log")
 broken=$(grep '^Linking' "$LOGS/run1.log" | sed 's/.* -> //' | while read -r d; do [[ -e "$d" ]] || echo "$d"; done)
 [[ -z "$broken" ]] && pass "$links symlinks created, none broken" || fail "broken links: $broken"
-[[ $renders -eq 5 ]] && pass "5 files rendered" || fail "rendered $renders files (expected 5)"
+[[ $renders -eq 6 ]] && pass "6 files rendered" || fail "rendered $renders files (expected 6)"
 
-for f in ~/.claude/settings.json ~/.codex/hooks.json ~/.cursor/hooks.json ~/.config/cxstatusline/turn-renderer.py ~/.codex/config.toml; do
+for f in ~/.ssh/config ~/.claude/settings.json ~/.codex/hooks.json ~/.cursor/hooks.json ~/.config/cxstatusline/turn-renderer.py ~/.codex/config.toml; do
   grep -q '__HOME__' "$f" && fail "unrendered __HOME__ in $f"
 done
 grep -q "$HOME/.claude/turn-timer.sh" ~/.claude/settings.json && pass "rendered paths use $HOME" || fail "settings.json paths wrong"
+[[ "$(stat -c %a ~/.ssh/config 2>/dev/null || stat -f %Lp ~/.ssh/config)" == 600 ]] && pass "ssh config is mode 600" || fail "ssh config permissions"
 python3 -c "import json,os;[json.load(open(os.path.expanduser(f))) for f in ['~/.claude/settings.json','~/.codex/hooks.json','~/.cursor/hooks.json']]" \
   && pass "rendered JSON valid" || fail "rendered JSON invalid"
 

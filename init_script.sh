@@ -5,11 +5,14 @@
 # Parse arguments
 CLEAN_CACHE=false
 INSTALL_BREW=false
+INSTALL_EXTRAS=false
 while [[ "$#" -gt 0 ]]; do
   case $1 in
     --clean) CLEAN_CACHE=true ;;
     --brew) INSTALL_BREW=true ;;
-    *) echo "Unknown option: $1 (use --clean, --brew)"; exit 1 ;;
+    --extras) INSTALL_EXTRAS=true ;;
+    --all) INSTALL_BREW=true; INSTALL_EXTRAS=true ;;
+    *) echo "Unknown option: $1 (use --clean, --brew, --extras, --all)"; exit 1 ;;
   esac
   shift
 done
@@ -115,10 +118,105 @@ link_config "ccstatusline/settings.json" "$HOME/.config/ccstatusline/settings.js
 link_config "cxstatusline/settings.json" "$HOME/.config/cxstatusline/settings.json"
 render_config "cxstatusline/turn-renderer.py" "$HOME/.config/cxstatusline/turn-renderer.py"
 
-if [[ "$BREW_FAILED" == true ]]; then
-  echo "Configs linked, but some Brewfile packages FAILED to install (see 'has failed!' above)."
+# Git and SSH (host aliases only; keys never live in this repo)
+link_config "git/gitconfig" "$HOME/.gitconfig"
+mkdir -p ~/.ssh && chmod 700 ~/.ssh
+render_config "ssh/config" "$HOME/.ssh/config"
+chmod 600 ~/.ssh/config
+
+# Editors (macOS paths)
+for editor in "vscode:Code" "cursor:Cursor"; do
+  user_dir="$HOME/Library/Application Support/${editor#*:}/User"
+  link_config "${editor%%:*}/User/settings.json" "$user_dir/settings.json"
+  link_config "${editor%%:*}/User/keybindings.json" "$user_dir/keybindings.json"
+  [[ -d "$DOTFILES_DIR/${editor%%:*}/User/snippets" ]] && link_config "${editor%%:*}/User/snippets" "$user_dir/snippets"
+done
+
+# Own skills (third-party ones are installed by --extras)
+link_config "skills/web-preview" "$HOME/.agents/skills/web-preview"
+link_config "skills/web-preview" "$HOME/.claude/skills/web-preview"
+link_config "codex/skills/claude-skill" "$HOME/.codex/skills/claude-skill"
+
+# ---------------------------------------------------------------------------
+# --extras: things installed through each tool's own CLI. Every step is skipped
+# when its tool is missing and is safe to re-run.
+# ---------------------------------------------------------------------------
+EXTRAS_FAILED=()
+extra() {  # extra <description> <command...>
+  local what="$1"; shift
+  echo "  $what"
+  "$@" </dev/null >/dev/null 2>&1 || { echo "    FAILED: $what"; EXTRAS_FAILED+=("$what"); }
+}
+
+if [[ "$INSTALL_EXTRAS" == true ]]; then
+  echo "Installing extras..."
+  [[ -x /opt/homebrew/bin/brew ]] && eval "$(/opt/homebrew/bin/brew shellenv)"
+  export PATH="$HOME/.local/bin:$PATH"
+
+  # Agent CLIs (official installers)
+  command -v claude >/dev/null || extra "Claude Code CLI" bash -c 'curl -fsSL https://claude.ai/install.sh | bash'
+  command -v cursor-agent >/dev/null || extra "Cursor CLI" bash -c 'curl -fsS https://cursor.com/install | bash'
+  # Codex CLI comes as cxstatusline's patched build + wrapper (~/.local/bin/codex)
+  if command -v cxstatusline >/dev/null && ! grep -qs cxstatusline-wrapper ~/.local/bin/codex; then
+    extra "Codex CLI (cxstatusline install)" cxstatusline install -y
+  fi
+
+  # Editor extensions
+  for editor in "code:vscode" "cursor:cursor"; do
+    cli="${editor%%:*}"
+    command -v "$cli" >/dev/null || { echo "  skipping $cli extensions ($cli not installed)"; continue; }
+    installed="${(L)$("$cli" --list-extensions 2>/dev/null)}"
+    while read -r ext; do
+      [[ -z "$ext" || "$installed" == *"${(L)ext}"* ]] && continue
+      extra "$cli extension $ext" "$cli" --install-extension "$ext"
+    done < "$DOTFILES_DIR/${editor#*:}/extensions.txt"
+  done
+
+  # Claude Code plugins: marketplaces + plugins listed in claude/settings.json
+  if command -v claude >/dev/null; then
+    python3 -c "
+import json, sys
+s = json.load(open(sys.argv[1]))
+for m in s.get('extraKnownMarketplaces', {}).values(): print('marketplace', m['source']['repo'])
+for p, on in s.get('enabledPlugins', {}).items():
+    if on: print('plugin', p)" "$DOTFILES_DIR/claude/settings.json" | while read -r kind name; do
+      if [[ "$kind" == marketplace ]]; then extra "Claude marketplace $name" claude plugin marketplace add "$name"
+      else extra "Claude plugin $name" claude plugin install "$name"; fi
+    done
+  fi
+
+  # Third-party agent skills (source + name per line)
+  if command -v npx >/dev/null; then
+    while read -r source skill; do
+      [[ -z "$source" || -e "$HOME/.agents/skills/$skill" ]] && continue
+      extra "skill $skill ($source)" npx -y skills add "$source" -g -y -s "$skill" -a '*'
+    done < "$DOTFILES_DIR/skills/third-party.txt"
+  fi
+
+  # terminal-browser's own agent skills/config
+  command -v terminal-browser >/dev/null && extra "terminal-browser setup" terminal-browser setup
+
+  # herdr plugin
+  if command -v herdr >/dev/null && ! herdr plugin list 2>/dev/null | grep -q auto-title; then
+    extra "herdr Auto Title plugin" herdr plugin install kryptamine/herdr-auto-title
+  fi
+
+  # Azure CLI extensions
+  if command -v az >/dev/null; then
+    have="$(az extension list --query '[].name' -o tsv 2>/dev/null)"
+    while read -r ext; do
+      [[ -z "$ext" || "$have" == *"$ext"* ]] && continue
+      extra "az extension $ext" az extension add --name "$ext" --yes
+    done < "$DOTFILES_DIR/azure-cli-extensions.txt"
+  fi
+fi
+
+if [[ "$BREW_FAILED" == true || ${#EXTRAS_FAILED[@]} -gt 0 ]]; then
+  echo "Configs linked, but some installs FAILED:"
+  [[ "$BREW_FAILED" == true ]] && echo "  - Brewfile packages (see 'has failed!' above)"
+  for f in "${EXTRAS_FAILED[@]}"; do echo "  - $f"; done
+  echo "Fix those and re-run; everything else is skipped when already done."
   exit 1
 fi
 echo "Setup complete! Restart your terminal or run 'source ~/.zshrc'"
-echo "Not covered here: herdr plugin (herdr plugin install kryptamine/herdr-auto-title),"
-echo "Claude plugins (enabled in settings.json; Claude installs them on first start)."
+[[ "$INSTALL_EXTRAS" != true ]] && echo "Run with --extras to install editor extensions, agent CLIs, plugins and skills."

@@ -79,6 +79,6 @@
       }
     }
   },
-  "theme": "dark",
-  "feedbackDrafts": "off"
+  "feedbackDrafts": "off",
+  "theme": "dark"
 }
