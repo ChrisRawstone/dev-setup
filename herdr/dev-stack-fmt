@@ -1,0 +1,87 @@
+#!/usr/bin/perl
+# Tidy one service's log lines for dev-stack: a short time, a coloured service tag, its own
+# timestamps and log-level prefixes removed, known noise dropped, and problems coloured.
+# Usage: <command> 2>&1 | dev-stack-fmt <name> <ansi colour>
+use strict;
+use warnings;
+use POSIX qw(strftime);
+$| = 1;
+
+my ($name, $colour) = @ARGV;
+my $tag = sprintf "\e[%sm%-6s\e[0m", $colour, $name;
+my ($DIM, $YELLOW, $RED, $OFF) = ("\e[90m", "\e[33m", "\e[31m", "\e[0m");
+my $after_warning = 0;
+my $shutdown_noise = 0;  # Python's "Exception ignored in ..." traceback when Ctrl-C stops a service
+my ($object, $code);  # a multi-line Node error object being collapsed into its first line
+my @traceback;        # a Python traceback, held until its last line says crash or Ctrl-C
+
+sub show {
+    my ($line, $hue) = @_;
+
+    # Their own timestamps: 2026/10/14 13:55:32, 2026-10-14 13:55:39,123, 1:55:26 PM, [13:40:32].
+    $line =~ s/^\d{4}[\/-]\d\d[\/-]\d\d[ T]\d\d:\d\d:\d\d(?:[,.]\d+)?\s+//;
+    $line =~ s/^\d{1,2}:\d\d:\d\d [AP]M\s+//;
+    $line =~ s/^\[(?:\d\d\/\d\d\/\d\d )?\d\d:\d\d:\d\d\]\s+//;
+    $line =~ s/\s{2,}[\w.]+\.py:\d+$//;  # Rich's "file.py:358" column
+
+    if ($line =~ s/^(?:INFO|DEBUG):?\s+//) { }
+    elsif ($line =~ s/^(?:WARNING|WARN):?\s+//) { $hue = $YELLOW }
+    elsif ($line =~ s/^(?:ERROR|CRITICAL|FATAL):?\s+//) { $hue = $RED }
+    $hue = $RED if $line =~ /^Traceback|^\s+File "|^\w+(?:Error|Exception)\b|^error:|\berror\b.*\bexited\b/;
+
+    # Python logger names: keep the module, e.g. "tracing_config: ...".
+    $line =~ s/^(?:[a-z_]+\.)+([a-z_]+): /$DIM$1:$OFF /;
+
+    # Access lines: 127.0.0.1:62548 - "GET /api/filters HTTP/1.1" 200 OK  ->  GET /api/filters 200
+    if ($line =~ /^\S+ - "(\w+) (\S+) HTTP\/[\d.]+" (\d{3})/) {
+        my ($method, $path, $status) = ($1, $2, $3);
+        my $s = $status >= 500 ? "$RED$status$OFF" : $status >= 400 ? "$YELLOW$status$OFF" : "$DIM$status$OFF";
+        $line = "$DIM$method$OFF $path $s";
+    }
+    $line =~ s/ \(Press CTRL\+C to quit\)//;
+    $line =~ s/^\[vite\] (?:\((?:client|ssr)\) )?//;
+    $line =~ s/^\s+(?=➜|VITE )//;
+
+    printf "%s%s%s %s %s%s%s\n", $DIM, strftime('%H:%M:%S', localtime), $OFF, $tag, $hue, $line, ($hue ? $OFF : '');
+}
+
+while (my $line = <STDIN>) {
+    chomp $line;
+    $line =~ s/\e\[[0-9;]*[A-Za-z]//g;
+    $line =~ s/\r//g;
+    next if $line =~ /^\s*$/;
+
+    # Node prints an error object over a dozen lines; keep its first line and its code.
+    if (defined $object) {
+        $code = $1 if $line =~ /^\s+code: '([^']+)'/;
+        next unless $line =~ /^\}/;
+        $line = $object . ($code ? " ($code)" : '');
+        undef $object;
+    } elsif ($line =~ /^(\S.*?) \{$/) {
+        ($object, $code) = ($1, undef);
+        next;
+    }
+
+    if (@traceback) {
+        if ($line =~ /^(?:\s|Traceback|During handling|The above exception)/) { push @traceback, $line; next; }
+        my @held = splice @traceback;
+        # A traceback that ends in KeyboardInterrupt is a service being stopped, not a crash.
+        next if $line =~ /^(?:KeyboardInterrupt|SystemExit|(?:asyncio\.)?(?:exceptions\.)?CancelledError)\b/;
+        show($_, $RED) for @held;
+        show($line, $RED);
+        next;
+    }
+    if ($line =~ /^Traceback /) { @traceback = ($line); next; }
+
+    if ($line =~ /^Exception ignored in/) { $shutdown_noise = 1; next; }
+    if ($shutdown_noise) { next if $line =~ /^(?:Traceback|\s|KeyboardInterrupt|\w+Error)/; $shutdown_noise = 0; }
+
+    # A Python warning prints the offending source line under it.
+    if ($after_warning) { $after_warning = 0; next if $line =~ /^\s{2,}\S/; }
+    if ($line =~ /\w+Warning: /) { $after_warning = 1; next; }
+    next if $line =~ /mlflow\.agent\.hint|Registry store URI not provided|Security middleware enabled|use --host to expose|Will watch for changes|^\$ vite |^uv run --locked /;
+    # The MLflow UI polls its own server, and the API sends it traces: drop that traffic.
+    next if $name eq 'mlflow' && $line =~ /HTTP\/[\d.]+" \d{3}|Started (?:server|parent) process|application startup/i;
+
+    show($line, '');
+}

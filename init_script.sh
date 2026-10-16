@@ -236,6 +236,13 @@ link_config "zellij" "$HOME/.config/zellij"
 link_config "starship/starship.toml" "$HOME/.config/starship.toml"
 link_config "worktrunk/config.toml" "$HOME/.config/worktrunk/config.toml"
 link_config "herdr/config.toml" "$HOME/.config/herdr/config.toml"
+link_config "herdr/auto-title.env" "$HOME/.config/herdr-auto-title/config.env"
+link_config "herdr/new-worktree.sh" "$HOME/.config/herdr/new-worktree.sh"
+link_config "herdr/dev-stack" "$HOME/.config/herdr/dev-stack"
+link_config "herdr/dev-stack-fmt" "$HOME/.config/herdr/dev-stack-fmt"
+link_config "herdr/dev-browser" "$HOME/.config/herdr/dev-browser"
+link_config "herdr/plugins/dev-servers/dev-servers" "$HOME/.config/herdr/dev-servers"
+link_config "herdr/worktrees" "$HOME/.config/herdr/worktrees"
 
 # Claude Code
 link_config "claude/CLAUDE.md" "$HOME/.claude/CLAUDE.md"
@@ -377,6 +384,9 @@ for p, on in s.get('enabledPlugins', {}).items():
     if herdr plugin list 2>/dev/null | grep -q auto-title; then skipped "herdr Auto Title plugin"
     else extra "herdr Auto Title plugin" "herdr plugin install kryptamine/herdr-auto-title --yes (needs 'go' from the Brewfile)" \
       herdr plugin install kryptamine/herdr-auto-title --yes; fi
+    if herdr plugin list 2>/dev/null | grep -q dev-servers; then skipped "herdr Dev servers plugin"
+    else extra "herdr Dev servers plugin" "herdr plugin link herdr/plugins/dev-servers" \
+      herdr plugin link "$DOTFILES_DIR/herdr/plugins/dev-servers"; fi
   fi
 
   # Xcode from the App Store isn't the active developer dir until selected (admin prompt)

@@ -1,0 +1,25 @@
+# Stops dev servers whose wt worktree is no longer open in Herdr. Linked by init_script.sh.
+id = "craasteen.dev-servers"
+name = "Dev servers"
+version = "0.1.0"
+min_herdr_version = "0.9.3"
+description = "Stops dev servers whose worktree no Herdr pane has open"
+platforms = ["macos", "linux"]
+
+[[events]]
+on = "workspace.closed"
+command = ["./dev-servers", "reap"]
+
+[[events]]
+on = "tab.closed"
+command = ["./dev-servers", "reap"]
+
+[[events]]
+on = "pane.closed"
+command = ["./dev-servers", "reap"]
+
+[[actions]]
+id = "reap"
+title = "Dev servers: stop those in closed worktrees"
+contexts = ["global"]
+command = ["./dev-servers", "reap"]

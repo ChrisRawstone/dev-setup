@@ -5,3 +5,50 @@ kitty_graphics = true
 
 [update]
 channel = "stable"
+
+[keys]
+# Caps Lock is remapped to Control in macOS (Keyboard > Modifier Keys), so Caps+S and Ctrl+B both work as prefix
+prefix = ["ctrl+s", "ctrl+b"]
+# prefix+shift+g runs new-worktree.sh (wt worktree + 3-pane workspace) instead of Herdr's own flow
+new_worktree = ""
+
+[[keys.command]]
+key = "prefix+shift+g"
+type = "popup"
+command = "~/.config/herdr/new-worktree.sh"
+width = "70%"
+height = "60%"
+
+# The same, plus the whole stack's logs and a browser on the web app in a column on the right
+[[keys.command]]
+key = "prefix+shift+f"
+type = "popup"
+command = "~/.config/herdr/new-worktree.sh --stack"
+width = "70%"
+height = "60%"
+
+# Open or close the reviewr diff pane beside the current pane
+[[keys.command]]
+key = "prefix+d"
+type = "plugin_action"
+command = "persiyanov.reviewr.toggle"
+
+# Dev servers per worktree; the Dev servers plugin (herdr/plugins/dev-servers) stops closed ones
+[[keys.command]]
+key = "prefix+shift+s"
+type = "popup"
+command = "~/.config/herdr/dev-servers list"
+width = "80%"
+height = "60%"
+
+# Worktrees of the focused pane's repository; Enter removes them (wt remove --reap) and closes their workspaces
+[[keys.command]]
+key = "prefix+shift+k"
+type = "popup"
+command = "~/.config/herdr/worktrees"
+width = "80%"
+height = "60%"
+
+[ui.sidebar.spaces]
+# Workspaces are named after their branch, so no branch row; $topic (Auto Title) says what the active tab is doing
+rows = [["state_icon", "workspace", "git_status"], ["$topic"]]

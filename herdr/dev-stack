@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+# Run this worktree's whole stack in one pane with tidy, coloured logs: the web app, the search API,
+# the MCP server (when the branch has `just mcp`) and a local MLflow UI that receives the API's traces.
+# Ctrl-C stops everything. Ports come from .env; MCP_PORT and MLFLOW_PORT are added when missing.
+set -euo pipefail
+cd "$(git rev-parse --show-toplevel)"
+fmt="$(dirname "$(readlink -f "$0")")/dev-stack-fmt"
+
+free_port() { python3 -c 'import socket; s = socket.socket(); s.bind(("127.0.0.1", 0)); print(s.getsockname()[1])'; }
+touch .env
+for v in MCP_PORT MLFLOW_PORT; do
+  grep -q "^$v=" .env || printf '%s=%s  # added by dev-stack\n' "$v" "$(free_port)" >> .env
+done
+port() { sed -nE "s/^$1=([0-9]+).*/\1/p" .env | tail -1; }
+WEB_PORT=$(port WEB_PORT) API_PORT=$(port API_PORT) MCP_PORT=$(port MCP_PORT) MLFLOW_PORT=$(port MLFLOW_PORT)
+: "${WEB_PORT:=5173}" "${API_PORT:=8001}"
+has_mcp=$(just --summary | tr ' ' '\n' | grep -qx mcp && echo yes || true)
+
+# Local traces only; one MLflow store per worktree, outside the repo.
+store="${XDG_STATE_HOME:-$HOME/.local/state}/dev-stack/$(basename "$PWD")"
+mkdir -p "$store"
+# COLUMNS: Rich (the MCP server's logging) wraps at 80 columns when not in a terminal.
+export PYTHONUNBUFFERED=1 NO_COLOR=1 COLUMNS=1000 MLFLOW_TRACKING_URI="http://127.0.0.1:$MLFLOW_PORT" MLFLOW_EXPERIMENT_ID=0
+
+# Stop every service on exit or Ctrl-C, quietly: ignore our own TERM, mute bash's job-status lines.
+trap 'trap - EXIT INT; trap "" TERM; exec 2>/dev/null; kill 0' EXIT INT TERM
+run() { local name=$1 color=$2; shift 2; ("$@" 2>&1 | "$fmt" "$name" "$color") & }
+
+printf '\e[1m%s\e[0m\n' "$(basename "$PWD")"
+printf '  \e[36mweb\e[0m     http://localhost:%s\n  \e[34mapi\e[0m     http://127.0.0.1:%s\n' "$WEB_PORT" "$API_PORT"
+[ -n "$has_mcp" ] && printf '  \e[35mmcp\e[0m     http://127.0.0.1:%s/mcp\n' "$MCP_PORT"
+printf '  \e[32mmlflow\e[0m  http://127.0.0.1:%s\n\n' "$MLFLOW_PORT"
+
+run mlflow 32 uv run --locked mlflow ui --backend-store-uri "sqlite:///$store/mlflow.db" \
+  --artifacts-destination "$store/artifacts" --port "$MLFLOW_PORT"
+run api 34 just api
+[ -n "$has_mcp" ] && run mcp 35 just mcp
+run web 36 env API_PORT="$API_PORT" bun run --cwd web dev --port "$WEB_PORT" --strictPort
+wait

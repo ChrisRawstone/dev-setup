@@ -1,0 +1,146 @@
+#!/usr/bin/env bash
+# Worktrees in a popup (prefix+shift+k): those of the focused pane's repository, or with ctrl-a those
+# of every repository in ~/Repos, each with its size on disk and the CPU and memory of the processes
+# working in it, and their totals on top. Enter, then y, removes the selected ones (Tab marks several) with
+# `wt remove --reap`, which stops their servers, then closes the Herdr workspaces whose every pane was
+# in them. wt refuses a worktree with uncommitted changes and keeps a branch that isn't merged, so
+# nothing unsaved is lost.
+# Sizes come from a cache that each popup refreshes in the background (du takes seconds), so they
+# show at once and update when the refresh ends.
+#   worktrees                the popup
+#   worktrees --rows [all]   its rows, for a check
+set -euo pipefail
+PATH="/opt/homebrew/bin:$PATH"
+SELF=$(cd "$(dirname "$0")" && pwd)/$(basename "$0")
+CACHE="${XDG_CACHE_HOME:-$HOME/.cache}/herdr-worktrees/sizes.tsv"
+
+fail() { printf '\n%s\nPress any key to close.' "$1" >&2; read -rsn1 || true; exit 1; }
+
+# The main checkout of the repository in the current folder.
+main_checkout() { local c; c=$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null) && echo "${c%/.git}"; }
+
+# workspace<TAB>folder for each pane, once for its launch folder and once for its live one.
+panes() { herdr pane list | jq -r '.result.panes[] | .workspace_id as $w | (.cwd, .foreground_cwd // empty) | [$w, .] | @tsv'; }
+
+# The workspaces with a pane in worktree $2, given panes() as $1: "all" those with every pane in it, else "some".
+workspaces_in() {
+  awk -F'\t' -v p="$2" -v want="$3" '
+    { inside = ($2 == p || index($2, p "/") == 1); if (inside) hit[$1] = 1; else out[$1] = 1 }
+    END { for (w in hit) if ((want == "all") == !(w in out)) print w }' <<<"$1" | sort
+}
+
+# main<TAB>path<TAB>branch<TAB>changes<TAB>state for each linked worktree of the repository at $1.
+items() {
+  wt -C "$1" list --format=json 2>/dev/null | jq -r --arg main "$1" '.items[] |
+    select(.worktree != null and (.worktree.main | not)) |
+    [ $main, .worktree.path, .branch // "(detached)",
+      (if (.worktree.changes | [.staged, .modified, .untracked, .renamed, .deleted, .conflicted] | any)
+       then "uncommitted" else "clean" end),
+      (.display.state // "" | if . == "integrated" then "merged" else gsub("_"; " ") end) ] | @tsv' || true
+}
+
+# cwd<TAB>cpu%<TAB>rss KB for every process.
+processes() {
+  awk -F'\t' 'NR == FNR { cwd[$1] = $2; next } ($1 in cwd) { print cwd[$1] "\t" $2 "\t" $3 }' \
+    <(lsof -nP -d cwd -Fpn 2>/dev/null | awk '/^p/{p=substr($0,2)} /^n/{print p"\t"substr($0,2)}') \
+    <(ps -axo pid=,pcpu=,rss= | awk '{print $1"\t"$2"\t"$3}')
+}
+
+# items() of this repository, or with "all" of every repository in ~/Repos.
+all_items() {
+  local mains
+  if [ "${1:-repo}" = all ]; then
+    mains=$(for g in "$HOME"/Repos/*/.git; do [ -d "$g" ] && echo "${g%/.git}"; done)
+  else
+    mains=$(main_checkout)
+  fi
+  # One wt list per repository, side by side, since each takes up to a second.
+  export -f items
+  xargs -P 8 -I{} bash -c 'items "$1"' _ {} <<<"$mains"
+}
+
+rows() {
+  local scope=${1:-repo} p
+  p=$(panes || true)
+  all_items "$scope" |
+    while IFS=$'\t' read -r main path branch changes state; do
+      all=$(workspaces_in "$p" "$path" all | paste -sd' ' -)
+      some=$(workspaces_in "$p" "$path" some | paste -sd' ' -)
+      open=${all:+closes $all}${some:+${all:+, }also in $some}
+      printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$main" "$path" "$branch" "$changes" "$state" "${open:-not open}"
+    done |
+    awk -F'\t' -v scope="$scope" -v cache="$CACHE" -v procs=<(processes) '
+      function size(kb) { return kb == "" ? "…" : kb >= 1048576 ? sprintf("%.1f GB", kb / 1048576) : sprintf("%d MB", kb / 1024) }
+      BEGIN {
+        while ((getline line < cache) > 0) { split(line, f, "\t"); kb[f[1]] = f[2] }
+      }
+      { n++; row[n] = $0; path[n] = $2; at[$2] = n }
+      END {
+        # A process belongs to the worktree its working folder is in or below.
+        while ((getline line < procs) > 0) {
+          split(line, f, "\t"); d = f[1]
+          while (d != "" && !(d in at)) sub(/\/[^\/]*$/, "", d)
+          if (d != "") { cpu[at[d]] += f[2]; mem[at[d]] += f[3] }
+        }
+        # Reading kb[p] creates it, so ask "in" first.
+        for (i = 1; i <= n; i++) { if (path[i] in kb) sized++; total += kb[path[i]]; tcpu += cpu[i]; tmem += mem[i] }
+        other = scope == "all" ? "this repository" : "all repositories"
+        printf "%d worktrees · %s on disk%s · CPU %.0f%% · %s memory      (ctrl-a: %s)\n", n, size(sized ? total : ""),
+          (sized < n ? " (sizing " (n - sized) " more)" : ""), tcpu, size(tmem), other
+        for (i = 1; i <= n; i++) {
+          split(row[i], f, "\t"); name = f[3]
+          if (scope == "all") { repo = f[1]; sub(/.*\//, "", repo); name = repo ": " name }
+          printf "%-48.48s %-11s %-12.12s %8s %5.0f%% %8s  %s\t%s\t%s\n", name, f[4], f[5], size(kb[f[2]]),
+            cpu[i], size(mem[i] == "" ? 0 : mem[i]), f[6], f[2], f[1]
+        }
+      }'
+}
+
+# Sizes of every worktree of every repository in ~/Repos, then a reload of the popup at socket $1.
+refresh_sizes() {
+  mkdir -p "$(dirname "$CACHE")"
+  all_items all | cut -f2 | xargs -P 8 -I{} du -sk {} 2>/dev/null | awk '{kb=$1; $1=""; sub(/^ /, ""); print $0"\t"kb}' >"$CACHE.$$"
+  mv "$CACHE.$$" "$CACHE"
+  curl -s --unix-socket "$1" -XPOST http://localhost -d "reload($SELF --rows \$(cat $SCOPE))" >/dev/null || true
+}
+
+remove() {
+  local path=$1 main=$2 p
+  p=$(panes || true)
+  echo "Removing ${path##*/} ..."
+  # From the main checkout, since the popup's own folder may be the one removed.
+  wt -C "$main" remove --reap --foreground --yes "$path" || return 1
+  # Closed only after wt succeeded, so a refused removal leaves the workspaces as they were.
+  for w in $(workspaces_in "$p" "$path" all); do herdr workspace close "$w" >/dev/null || true; done
+}
+
+list() {
+  local picked failed sock answer
+  main_checkout >/dev/null || fail "Not in a git repository: $PWD"
+  SCOPE=$(mktemp -t herdr-worktrees-scope) sock="$SCOPE.sock"
+  trap 'rm -f "$SCOPE" "$sock"' EXIT
+  echo repo >"$SCOPE"
+  export SCOPE
+  while true; do
+    picked=$(rows "$(cat "$SCOPE")" | fzf --multi --reverse --no-sort --header-lines=1 \
+      --delimiter=$'\t' --with-nth=1 --listen="$sock" \
+      --header=$'Enter removes the selected worktrees · Tab marks several · Esc closes\nBRANCH                                           CHANGES     STATE            SIZE   CPU   MEMORY  HERDR WORKSPACES' \
+      --bind "start:execute-silent($SELF --refresh-sizes $sock >/dev/null 2>&1 &)" \
+      --bind "ctrl-a:execute-silent([ \$(cat $SCOPE) = all ] && echo repo >$SCOPE || echo all >$SCOPE)+reload($SELF --rows \$(cat $SCOPE))" \
+      --prompt='Filter > ') || { [ $? -eq 130 ] && exit 0; continue; }  # Esc closes; no match reloads
+    # A stray Enter would otherwise remove the row under the cursor.
+    clear; printf 'Remove these worktrees?\n\n'; cut -f2 <<<"$picked" | sed 's/^/  /'
+    read -rsn1 -p $'\n[y/N] ' answer; echo
+    [ "$answer" = y ] || continue
+    failed=
+    while IFS=$'\t' read -r _ path main; do remove "$path" "$main" || failed=1; done <<<"$picked"
+    [ -z "$failed" ] || { printf '\nwt kept the worktrees above. Press any key.'; read -rsn1 || true; }
+  done
+}
+
+case ${1:-} in
+  --rows) rows "${2:-repo}" ;;
+  --refresh-sizes) refresh_sizes "$2" ;;
+  "") list ;;
+  *) echo "usage: worktrees [--rows [all]]" >&2; exit 2 ;;
+esac

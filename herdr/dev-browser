@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# Open the web app in terminal-browser once it and its API answer, zoomed so the page lays out
+# like a 13-14" laptop: in the 40% column of new-worktree.sh --stack, 67% gives about 1330x834.
+# Usage: dev-browser <web url> [api url] [zoom-out steps, default 4: 90, 80, 75, 67%]
+set -euo pipefail
+url=$1 api=${2:-} steps=${3:-4}
+
+until curl -sf -o /dev/null "$url" && { [ -z "$api" ] || curl -s -o /dev/null "$api"; }; do sleep 1; done
+
+# Chrome remembers zoom per host, so reset first; the keys go to this pane once the browser draws.
+(
+  until terminal-browser ls --all --json 2>/dev/null | jq -e --arg p "$HERDR_PANE_ID" '.browsers[] | select(.pane.pane == $p)' >/dev/null; do sleep 0.5; done
+  sleep 1.5
+  herdr pane send-keys "$HERDR_PANE_ID" ctrl+0 >/dev/null
+  for _ in $(seq "$steps"); do sleep 0.4; herdr pane send-keys "$HERDR_PANE_ID" cmd+ctrl+minus >/dev/null; done
+) >/dev/null 2>&1 &
+disown
+exec terminal-browser open "$url"
