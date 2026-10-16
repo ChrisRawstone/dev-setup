@@ -72,7 +72,7 @@
     "terminal.integrated.altClickMovesCursor": false,
     "chat.editing.confirmEditRequestRemoval": false,
     "workbench.iconTheme": "material-icon-theme",
-    "python.defaultInterpreterPath": "/usr/local/bin/python3",
+    "python.defaultInterpreterPath": "/opt/homebrew/bin/python3.14",
     "python.analysis.typeCheckingMode": "basic",
     "cursorpyright.analysis.diagnosticSeverityOverrides": {
         "reportMissingTypeStubs": "none"

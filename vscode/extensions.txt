@@ -4,7 +4,6 @@ cweijan.vscode-office
 databricks.neon-local-connect
 dbaeumer.vscode-eslint
 donjayamanne.githistory
-eamodio.gitlens
 firefox-devtools.vscode-firefox-debug
 fooxly.workspace
 james-yu.latex-workshop
