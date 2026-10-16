@@ -565,3 +565,21 @@ if [[ -n $VIRTUAL_ENV ]]; then
   fi
 fi
 export PATH="$HOME/.local/bin:$PATH"
+# The following lines have been added by Docker Desktop to enable Docker CLI completions.
+fpath=($HOME/.docker/completions $fpath)
+autoload -Uz compinit
+(( ${+_comps[docker]} )) || compinit
+# End of Docker CLI completions
+
+# Clear terminal-browser lag in Herdr: detach first (ctrl+b q), then run `hf`.
+# Closes the browsers so the next `terminal-browser open` uses Herdr's current graphics path,
+# then reattaches with a fresh client. Panes keep running.
+herdr-fresh() {
+  terminal-browser shutdown >/dev/null 2>&1
+  herdr "$@"
+}
+alias hf=herdr-fresh
+
+# Ghostty runs with TMPDIR=/tmp (~/Applications/Ghostty TMPDIR.app) so Ghostty 1.3.1 accepts Herdr's
+# /tmp image files (ghostty-org/ghostty#14567, fixed in 1.4.0). Give shells their private temp dir back.
+[[ $TMPDIR == /tmp ]] && export TMPDIR=$(getconf DARWIN_USER_TEMP_DIR)
