@@ -287,6 +287,8 @@ done
 # Own skills (third-party ones are installed by --extras)
 link_config "skills/web-preview" "$HOME/.agents/skills/web-preview"
 link_config "skills/web-preview" "$HOME/.claude/skills/web-preview"
+link_config "skills/notes" "$HOME/.claude/skills/notes"
+link_config "skills/notes" "$HOME/.agents/skills/notes"
 link_config "codex/skills/claude-skill" "$HOME/.codex/skills/claude-skill"
 
 # ---------------------------------------------------------------------------
