@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Stop local dev servers (and agent-browser daemons) that have been left running.
+"""Stop local dev servers, agent-browser daemons and orphaned Claude Code bg-pty-host
+spares (parent gone) that have been left running.
 
 A dev server is any process listening on TCP whose working directory is under ~/Repos.
 It is stopped when it is older than --max-age hours AND no claude/codex session is
@@ -104,7 +105,7 @@ def main():
     procs = processes()
 
     listeners = {int(p) for p in sh("lsof", "-nP", "-iTCP", "-sTCP:LISTEN", "-t").split()}
-    sessions = [p for p, v in procs.items() if SESSIONS.match(v[2])]
+    sessions = [p for p, v in procs.items() if SESSIONS.match(v[2]) and "bg-pty-host" not in v[3]]
     cw = cwds(sorted(listeners | set(sessions)))
     busy = {project(cw.get(p)) for p in sessions} - {None}
 
@@ -120,6 +121,11 @@ def main():
     for pid, v in procs.items():
         if "agent-browser/bin/agent-browser" in v[3] and procs.get(v[0], [0, 0, ""])[2] != "agent-browser":
             jobs.setdefault(job_root(pid, procs), "agent-browser")
+
+    # Claude Code spare terminals whose daemon is gone (adopted by launchd), e.g. after an update
+    for pid, v in procs.items():
+        if v[0] == 1 and "claude bg-pty-host" in v[3]:
+            jobs.setdefault(pid, "orphaned claude bg-pty-host")
 
     stamp = time.strftime("%Y-%m-%d %H:%M")
     for root, proj in sorted(jobs.items()):

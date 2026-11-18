@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Every 15 min (skipped while asleep, never wakes the Mac): notify-only health checks, see scripts/mac-watchdog.py.
+     Install: sed "s#__HOME__#$HOME#g" launchd/com.rawstone.mac-watchdog.plist > ~/Library/LaunchAgents/com.rawstone.mac-watchdog.plist
+              launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.rawstone.mac-watchdog.plist -->
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.rawstone.mac-watchdog</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/bin/python3</string>
+    <string>__HOME__/Repos/personal/dev-setup/scripts/mac-watchdog.py</string>
+  </array>
+  <key>StartInterval</key><integer>900</integer>
+  <key>RunAtLoad</key><true/>
+  <key>ProcessType</key><string>Background</string>
+  <key>LowPriorityIO</key><true/>
+  <key>StandardOutPath</key><string>__HOME__/Library/Logs/mac-watchdog.log</string>
+  <key>StandardErrorPath</key><string>__HOME__/Library/Logs/mac-watchdog.log</string>
+</dict>
+</plist>
