@@ -14,8 +14,10 @@ The owner's preferences for notes. Update this file when they say what works or 
 - Numbers over time or side by side: a Charts plugin chart (` ```chart `) or DataviewJS over a CSV in `_generated/`.
 - Comparisons (products, options, tools): a table with one row per option, the key specs, price with a link, and a
   verdict column; recommended option first.
-- Products: 1–3 photos of each recommended one (exact variant), stored small (< 200 kB) next to the note in an
-  `attachments/` folder, with caption and source link.
+- Products: 1–3 photos of each recommended one (exact variant; the shopper agent picks and checks them), stored small
+  (< 200 kB) in an `attachments/` folder next to the note. Show them as a table with one column per product:
+  the photo (`![[file.jpg|200]]`) in the first row and the product name, price and a link to the listing the photo
+  came from in the second, so every photo is labelled. Never a loose row of photos with one shared caption.
 
 ## Kinds of note
 - **Codebase explainer:** what it does in two lines, a diagram of the main parts and how data flows, where each part
