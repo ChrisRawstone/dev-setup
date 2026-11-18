@@ -45,6 +45,14 @@ When I ask you to explain something, understand a codebase or technology, give a
 things to buy or choose, write it as a note in my Obsidian vault with the `notes` skill (diagrams and charts welcome),
 then give me a short answer in chat with a link to the note. Skip it for quick one-line answers and plain code work.
 
+# Do it yourself
+
+Set things up yourself instead of giving me manual steps: app settings, hotkeys, plugins, config files, scheduled
+jobs, accounts. Find the way first (the app's config files, its CLI or scripting API such as `obsidian eval`,
+`defaults write`, an official API), do it, and read the setting back to check. Hand me a step only when it truly needs
+me (Touch ID or a login prompt, a payment, something physical, or something another rule forbids, like driving my open
+Obsidian window), and say why.
+
 # Git and GitHub
 
 Commit as `ChrisRawstone <christian.raasteen@outlook.com>` with the GitHub account ChrisRawstone. The gitconfig sets
