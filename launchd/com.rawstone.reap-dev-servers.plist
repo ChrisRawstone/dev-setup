@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<!-- Hourly: stop dev servers under ~/Repos older than 48 h with no claude/codex session in their worktree.
+<!-- Every 6 h: stop dev servers under ~/Repos older than 48 h with no claude/codex session in their worktree.
      Install: sed "s#__HOME__#$HOME#g" launchd/com.rawstone.reap-dev-servers.plist > ~/Library/LaunchAgents/com.rawstone.reap-dev-servers.plist
               launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.rawstone.reap-dev-servers.plist -->
 <plist version="1.0">
@@ -12,7 +12,7 @@
     <string>__HOME__/Repos/personal/dev-setup/scripts/reap-dev-servers.py</string>
     <string>--max-age</string><string>48</string>
   </array>
-  <key>StartInterval</key><integer>3600</integer>
+  <key>StartInterval</key><integer>21600</integer>
   <key>RunAtLoad</key><true/>
   <key>StandardOutPath</key><string>__HOME__/Library/Logs/reap-dev-servers.log</string>
   <key>StandardErrorPath</key><string>__HOME__/Library/Logs/reap-dev-servers.log</string>

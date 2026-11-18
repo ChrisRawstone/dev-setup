@@ -5,7 +5,7 @@ A dev server is any process listening on TCP whose working directory is under ~/
 It is stopped when it is older than --max-age hours AND no claude/codex session is
 working in the same project (same repo, or same .claude/worktrees/<name> worktree).
 The whole job is stopped (vite + npm wrapper, uvicorn + reloader), never the shell
-or Herdr pane it runs in. Run hourly by launchd (launchd/com.rawstone.reap-dev-servers.plist).
+or Herdr pane it runs in. Run every 6 h by launchd (launchd/com.rawstone.reap-dev-servers.plist).
 
   reap-dev-servers.py              # stop servers older than 48 h
   reap-dev-servers.py --max-age 1  # stop servers older than 1 h
