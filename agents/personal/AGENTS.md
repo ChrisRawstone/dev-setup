@@ -52,7 +52,9 @@ both for this folder, and `gh` picks the account by folder. Use `dr.rawstone@out
 stay anonymous (`git -c user.email=dr.rawstone@outlook.com commit …`).
 
 The `/pr` skill is off in every repo here (`"pr": "off"` in `skillOverrides`), so the global "open every PR with `/pr`"
-rule doesn't apply: commit or push only when I ask, and give a new personal repo the same override.
+rule doesn't apply: commit or push only when I ask, and give a new personal repo the same override. Exception: in `dev-setup`, commit and push your own
+changes right away, even when it holds my unrelated uncommitted or staged work; commit only your files and hunks
+(`git commit -- <paths>`, or a temporary index for a file we both changed) and leave mine as they were.
 
 # MCP servers and connectors
 
