@@ -17,23 +17,43 @@ or focus an Obsidian window. Pass those rules on to any subagent that writes not
 
 ## 2. Where it goes
 
-- A project (a repo in `~/Repos/personal`): `<Project>/` (e.g. `Edge Lab/`, `Bolig/`), its home note `<Project>.md`.
-  Codebase explanations go in `<Project>/Explainers/`.
-- Shopping and product choices: `Shopping/<Thing>.md` (e.g. `Shopping/Robot vacuum.md`).
-- Learning a technology or concept: `Learn/<Topic>.md`.
-- Life admin (`~/scratch` questions worth keeping): `Life/<Topic>.md`.
+Every folder works the same way, so the owner can find anything in two clicks:
 
-Before writing, search the vault (`grep -ril` on the topic) and update the existing note instead of making a twin.
-Link new notes from the folder's home note (create `Shopping.md`, `Learn.md`, `Life.md` home notes on first use) and
-from `Home.md` for a new folder.
+```
+Home.md                      table of every folder + recently updated
+<Folder>/<Folder>.md         the folder's home note: start here (overview, status, table of its notes)
+<Folder>/<Note>.md           a few core notes the owner reads
+<Folder>/Reference/          long detail notes: experiments, research, code walk-throughs
+<Folder>/_generated/         CSVs written by scripts
+<Folder>/attachments/        images
+```
 
-## 3. How it looks
+- A project (a repo in `~/Repos/personal`) gets `<Project>/` (e.g. `Edge Lab/`, `Stocks/`); codebase explanations go
+  in its `Reference/`.
+- Shopping goes in `Shopping/`, learning a technology or concept in `Learn/` (general explainers live here, not
+  inside a project, and projects link to them), and life admin in `Life/`.
+- A new folder gets its home note and a row in `Home.md`. A new note gets a row in its folder's home note table
+  (note, one line on what's in it).
+
+## 3. Keep it lean
+
+The owner should never feel lost or buried. Before adding anything:
+
+- **Update, don't add.** Search the vault (`grep -ril`) and extend the existing note. Two notes on one topic get
+  merged; fix the links (`[[...]]`) that pointed at the old one.
+- **The home note tells the story.** In plain words: the goal, what was tried and what came out, what's running now,
+  what's next. Keep it current: when work moves on, rewrite its status, don't append to it.
+- **Budgets:** a home note fits on about two screens; a core note stays under about 1,500 words. Detail beyond that
+  goes in `Reference/` with a summary at the top.
+- **Delete what's stale:** dashboards for stopped bots, superseded plans, duplicate explainers.
+
+## 4. How it looks
 
 Follow [style.md](style.md): the owner's preferences for structure, diagrams, charts and tone. When the owner says
 what they like or dislike about a note, update `style.md` (this skill lives in dev-setup `skills/notes/`) so every
 later note follows it.
 
-## 4. Check, then hand over
+## 5. Check, then hand over
 
 1. Render it: `~/Repos/personal/notes/.tools/render/render.sh "<Folder/Note.md>" <scratchpad>/note.png`, Read the PNG
    and fix anything broken (a blank chart, a raw code block, an error in the JSON report). Look at the whole page.
