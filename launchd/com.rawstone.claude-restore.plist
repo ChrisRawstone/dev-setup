@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- At login: resume the Claude sessions a restart killed in herdr-app terminals, see scripts/claude-restore.py.
+     Needs the hc-session-record.py SessionStart/SessionEnd hook in claude/settings.json.
+     Install: sed "s#__HOME__#$HOME#g" launchd/com.rawstone.claude-restore.plist > ~/Library/LaunchAgents/com.rawstone.claude-restore.plist
+              launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.rawstone.claude-restore.plist -->
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.rawstone.claude-restore</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/bin/python3</string>
+    <string>__HOME__/Repos/personal/dev-setup/scripts/claude-restore.py</string>
+  </array>
+  <key>RunAtLoad</key><true/>
+  <key>StandardOutPath</key><string>__HOME__/Library/Logs/claude-restore.log</string>
+  <key>StandardErrorPath</key><string>__HOME__/Library/Logs/claude-restore.log</string>
+</dict>
+</plist>
