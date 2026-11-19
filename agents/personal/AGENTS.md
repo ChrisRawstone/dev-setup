@@ -35,7 +35,8 @@ own `AGENTS.md` or `README.md`. Update this list when a repo is added, removed o
 - `dev-setup`: dotfiles, apps and agent configs for this Mac, and the source of these `AGENTS.md` files.
 - `herdr`, `herdr-patched`: my fix branches of the Herdr terminal multiplexer (upstream `herdrdev/herdr`).
 - `Macchiato`: macOS menu bar app that keeps the Mac awake.
-- `AgentsCompare`: VS Code/Cursor extension for reviewing everything a branch changed.
+- `AgentsCompare`: VS Code/Cursor extension for reviewing everything a branch changed, and the same as a
+  herdr-app mod (`herdr-app/agentscompare`, installed by `npm run install:herdr`) behind the Changes panel.
 
 `~/scratch` is for life admin and one-off questions; its memory holds notes on my company, home, plants and Mac.
 

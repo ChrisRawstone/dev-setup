@@ -158,7 +158,7 @@
                       "id": "changes",
                       "type": "block",
                       "content": {
-                        "mod": "changes"
+                        "mod": "agentscompare"
                       }
                     }
                   ]
