@@ -13,8 +13,10 @@ compare them in real use.
 ## 0. Pick the mode
 
 - First word `check` or `manage`: use it.
-- First tests (Nov 2026): `manage` was better on shopping decisions (its pushback caught wrong prices
-  the Opus check missed); `check` slightly better on code audits; equal on Q&A and docs research.
+- First tests (Nov 2026): `manage` beat `check` on shopping (its pushback caught wrong prices), `check`
+  was slightly better on code audits, equal on Q&A and research. But a plain Opus session without
+  this skill scored as well or better on shopping (7.7 vs 7.2/6.7) at similar cost: use it to save
+  Opus tokens, not for better answers.
 - No mode given: take the opposite of the last entry in `~/.claude/delegate-log.jsonl` (start with
   `manage` if the file is missing), and say which mode in one line. That alternation is the A/B test.
 
