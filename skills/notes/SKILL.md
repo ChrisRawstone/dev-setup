@@ -59,8 +59,9 @@ Any product search (every use of the `marketplace-railway` MCP, by the main sess
 `Shopping/`, or updates the existing one on that product, plus its row in `Shopping/Shopping.md`. Layout:
 
 1. `[!summary]` callout: the pick, the price and where, the date checked.
-2. **Options table**: every real option found, not only the winner: name, price in DKK (with shipping/import to
-   Denmark), shop as a link, key facts, verdict. Then a short **ruled out** list (what was checked and why it's out).
+2. **Options table**: every real option found, not only the winner: a **photo column right after `#`** with one
+   thumbnail per row (`![[file.jpg\|120]]`, the pipe escaped inside a table; owner's request 2026-11-19), name, price
+   in DKK (with shipping/import to Denmark), shop as a link, key facts, verdict. Then a short **ruled out** list (what was checked and why it's out).
 3. **Photos**: 1–3 per option in a table (`![[file.jpg|170]]`), stored in `Shopping/attachments/` (shrunk to ~600 px,
    under ~100 kB, named `<topic>-<product>-<n>.jpg`), each with a caption and a source link. Use the shopper
    subagent's checked photos; for others take the shop's product images.
