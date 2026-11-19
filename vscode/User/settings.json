@@ -97,8 +97,15 @@
         "https://*.stripe.com": true
     },
 
+    "material-icon-theme.files.associations": {
+        ".dockerignore": "docker",
+        ".betterleaksignore": "git",
+        ".worktreeinclude": "git",
+        ".tool-versions": "settings"
+    },
     "material-icon-theme.folders.associations": {
         
+        ".cog": "config",
         "file_storage" : "layout",
         "alembic" : "database",
         "document_intelligence" : "layout",
