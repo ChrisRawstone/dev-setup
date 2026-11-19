@@ -98,12 +98,30 @@
     },
 
     "material-icon-theme.files.associations": {
+        ".codex-root": "settings",
+        ".ds_store": "applescript",
         ".dockerignore": "docker",
         ".betterleaksignore": "git",
         ".worktreeinclude": "git",
         ".tool-versions": "settings"
     },
     "material-icon-theme.folders.associations": {
+        "AgentsCompare": "review",
+        "aps-autopilot": "contract",
+        "bolig": "layout",
+        "dev-setup": "tools",
+        "edge-lab": "simulations",
+        "flights": "archive",
+        "herdr": "console",
+        "herdr-patched": "console",
+        "home-assistant": "home",
+        "ikea-to-apple-home": "macos",
+        "Macchiato": "desktop",
+        "marketplace-mcp": "cart",
+        "notes": "obsidian",
+        "sites": "public",
+        "stocks": "benchmark",
+        "trip-planner": "global",
         
         ".cog": "config",
         "file_storage" : "layout",
