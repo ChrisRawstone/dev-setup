@@ -13,6 +13,8 @@ compare them in real use.
 ## 0. Pick the mode
 
 - First word `check` or `manage`: use it.
+- First tests (Nov 2026): `manage` was better on shopping decisions (its pushback caught wrong prices
+  the Opus check missed); `check` slightly better on code audits; equal on Q&A and docs research.
 - No mode given: take the opposite of the last entry in `~/.claude/delegate-log.jsonl` (start with
   `manage` if the file is missing), and say which mode in one line. That alternation is the A/B test.
 
@@ -25,6 +27,9 @@ compare them in real use.
 - Each brief stands alone: goal, what is known, paths/URLs, output format, and "write your full
   result to `<scratchpad>/delegate/<slice>.md` and return a short summary". Require every claim to
   carry its evidence: file:line, command + output, or URL + quote.
+- Then wait for the workers' completion notifications. No `ScheduleWakeup` fallback, and never write,
+  summarise or count a worker's result before its notification has arrived (a test run invented
+  worker reports while waiting).
 
 ## 2a. Mode `check`: one pass
 
@@ -44,6 +49,9 @@ compare them in real use.
    independent ones or drop it", "show the measurement behind this 60%", "test X fails: fix it".
 3. Re-check what comes back. Stop when every key claim is verified, or after **2 rounds**; mark the
    rest "unverified" rather than looping.
+   Pushback fires on claims that fail a check: prices, specs, sources (shopping, research). On code
+   where every claim checks out, also send each worker back once with what its slice skipped or
+   called fine without a check, since there the misses are gaps, not false claims.
 4. Answer with the verified claims, then a short "unverified / dropped" list.
 
 ## 3. Log it
@@ -54,6 +62,6 @@ Append one line to `~/.claude/delegate-log.jsonl` (create it if missing):
 {"date":"YYYY-MM-DD","mode":"manage","task":"<3-6 generic words, no client or work names>","workers":2,"rounds":1,"sent_back":3,"caught":2,"opus_check":false}
 ```
 
-`sent_back` = claims sent back to workers; `caught` = claims that turned out wrong or unsupported
-(by your checks, the pushback or the Opus check). End the reply with one line: "Mode: <mode>, caught
+`sent_back` = claims sent back to workers; `caught` = claims proven wrong or unsupported by a check
+you actually ran (your own, the pushback or the Opus check), after the worker's result arrived. End the reply with one line: "Mode: <mode>, caught
 <n>. Rate it 1–5?" If the owner answers, add `"rating"` to that log line.
