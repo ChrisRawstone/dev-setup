@@ -77,6 +77,8 @@ claim gets its link.
    and fix anything broken (a blank chart, a raw code block, an error in the JSON report). Look at the whole page.
 2. Don't commit by hand: obsidian-git commits and pushes within 10 minutes. Commit and push yourself only if the
    owner needs it on the phone right away and asks.
-3. In chat: three to six lines with the answer, then the note as a clickable link the owner opens themselves:
+3. In chat: three to six lines with the answer, then the note as a clickable link the owner opens themselves. **End
+   every reply that wrote or touched a note with that link as the very last line** (owner's request 2026-11-19), also
+   in later replies about the same topic, so they never have to look for it:
    `[Note title](obsidian://open?vault=notes&file=<Folder>%2F<Note>)` (URL-encode the path, no `.md`), plus the file
    path link. Never run `open obsidian://…` yourself.
