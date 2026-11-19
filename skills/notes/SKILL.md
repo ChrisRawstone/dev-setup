@@ -1,6 +1,6 @@
 ---
 name: notes
-description: Write explanations, overviews and comparisons as notes in the owner's Obsidian vault (~/Repos/personal/notes) instead of only in chat, with diagrams and charts. Personal projects only (~/Repos/personal, ~/scratch), never work. Use whenever the owner asks to explain, understand or learn something (a codebase, a technology, a concept), wants an overview, plan, status or summary, or compares options to buy or choose (shopping, products, services); also for research results worth keeping. Skip for quick one-line answers and plain code changes.
+description: Write explanations, overviews and comparisons as notes in the owner's Obsidian vault (~/Repos/personal/notes) instead of only in chat, with diagrams and charts. Personal projects only (~/Repos/personal, ~/scratch), never work. Use whenever the owner asks to explain, understand or learn something (a codebase, a technology, a concept), wants an overview, plan, status or summary, or compares options to buy or choose (shopping, products, services), and after every product search with the marketplace-railway MCP; also for research results worth keeping. Skip for quick one-line answers and plain code changes.
 ---
 
 # Notes in the vault
@@ -52,6 +52,23 @@ The owner should never feel lost or buried. Before adding anything:
 Follow [style.md](style.md): the owner's preferences for structure, diagrams, charts and tone. When the owner says
 what they like or dislike about a note, update `style.md` (this skill lives in dev-setup `skills/notes/`) so every
 later note follows it.
+
+## 4b. Shopping notes
+
+Any product search (every use of the `marketplace-railway` MCP, by the main session or a subagent) gets a note in
+`Shopping/`, or updates the existing one on that product, plus its row in `Shopping/Shopping.md`. Layout:
+
+1. `[!summary]` callout: the pick, the price and where, the date checked.
+2. **Options table**: every real option found, not only the winner: name, price in DKK (with shipping/import to
+   Denmark), shop as a link, key facts, verdict. Then a short **ruled out** list (what was checked and why it's out).
+3. **Photos**: 1–3 per option in a table (`![[file.jpg|170]]`), stored in `Shopping/attachments/` (shrunk to ~600 px,
+   under ~100 kB, named `<topic>-<product>-<n>.jpg`), each with a caption and a source link. Use the shopper
+   subagent's checked photos; for others take the shop's product images.
+4. **Not checked**: what's still open.
+
+Work in passes: create the note as soon as the first results are in, update it as each agent reports back, and when
+the last one is back rewrite the summary and ranking, since a late find can change the pick. Every price, shop and
+claim gets its link.
 
 ## 5. Check, then hand over
 

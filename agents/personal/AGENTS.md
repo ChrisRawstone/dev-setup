@@ -94,6 +94,14 @@ facts there (variant comparison tables, what's included, battery, compatibility,
 Amazon. Do it through the `shopper` subagent, several listings per call, never `get_photos` in the main session: photos
 are the biggest context cost.
 
+**Every product search ends up in Obsidian, with photos and links**, not only in chat: any time `marketplace-railway`
+is used (by you or a subagent), write or update a note in the vault's `Shopping/` folder with the `notes` skill (its
+"Shopping notes" section has the layout). List every real option found (not just the pick), each with price, shop link,
+key facts and 1–3 photos stored in `Shopping/attachments/`. Start the note as soon as the first results are in and
+update it as each agent reports; you don't have to wait for all of them. When the last agent is back, update it once
+more (ranking, pick, what changed), since late finds often change the picture. Subagents doing product research write
+to the same note or hand you the facts and photo URLs for it.
+
 # Product photos on pages
 
 When a page or site recommends products, show 2–3 photos of each recommended product next to it (the exact variant and
