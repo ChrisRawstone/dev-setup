@@ -106,5 +106,62 @@
     }
   },
   "feedbackDrafts": "off",
-  "theme": "dark"
+  "theme": "dark",
+  "deniedMcpServers": [
+    {
+      "serverName": "claude.ai Asana"
+    },
+    {
+      "serverName": "claude.ai Box"
+    },
+    {
+      "serverName": "claude.ai Canva"
+    },
+    {
+      "serverName": "claude.ai Figma"
+    },
+    {
+      "serverName": "claude.ai Gmail"
+    },
+    {
+      "serverName": "claude.ai Google Calendar"
+    },
+    {
+      "serverName": "claude.ai Google Docs"
+    },
+    {
+      "serverName": "claude.ai Google Drive"
+    },
+    {
+      "serverName": "claude.ai Google Sheets"
+    },
+    {
+      "serverName": "claude.ai Google Slides"
+    },
+    {
+      "serverName": "claude.ai HubSpot"
+    },
+    {
+      "serverName": "claude.ai Intercom"
+    },
+    {
+      "serverName": "claude.ai Linear"
+    },
+    {
+      "serverName": "claude.ai Meetings"
+    },
+    {
+      "serverName": "claude.ai Claude Data"
+    }
+  ],
+  "skillOverrides": {
+    "anthropic-skills:docx": "name-only",
+    "anthropic-skills:pdf": "name-only",
+    "anthropic-skills:pptx": "name-only",
+    "anthropic-skills:docs": "name-only",
+    "anthropic-skills:google-workspace": "name-only",
+    "anthropic-skills:morning": "name-only",
+    "anthropic-skills:import-memory": "name-only",
+    "anthropic-skills:skill-creator": "name-only"
+  }
 }
