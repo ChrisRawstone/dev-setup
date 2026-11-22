@@ -1,0 +1,6 @@
+#!/bin/sh
+# Keep the turn timer outside cxstatusline's self-repairing Codex launcher.
+if [ "$1" = "render" ]; then
+  exec python3 "$HOME/.config/cxstatusline/turn-renderer.py"
+fi
+exec /opt/homebrew/bin/node /opt/homebrew/lib/node_modules/cxstatusline/dist/cxstatusline.js "$@"

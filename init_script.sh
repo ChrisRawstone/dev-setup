@@ -265,6 +265,7 @@ render_config "cursor/hooks.json" "$HOME/.cursor/hooks.json"
 link_config "ccstatusline/settings.json" "$HOME/.config/ccstatusline/settings.json"
 link_config "cxstatusline/settings.json" "$HOME/.config/cxstatusline/settings.json"
 render_config "cxstatusline/turn-renderer.py" "$HOME/.config/cxstatusline/turn-renderer.py"
+link_config "bin/cxstatusline" "$HOME/.local/bin/cxstatusline"
 
 # Git and SSH (host aliases only; keys never live in this repo)
 link_config "git/gitconfig" "$HOME/.gitconfig"
@@ -314,12 +315,8 @@ if [[ "$INSTALL_EXTRAS" == true ]]; then
   else
     extra "Codex CLI (cxstatusline install)" "cxstatusline install -y; 'cxstatusline doctor' explains what's wrong" cxstatusline install -y
   fi
-  # Point the wrapper's renderer at turn-renderer.py (adds the per-turn timer).
-  # `cxstatusline upgrade` regenerates the wrapper; re-run --extras afterwards.
-  if grep -qs cxstatusline-wrapper ~/.local/bin/codex && ! grep -qs turn-renderer ~/.local/bin/codex; then
-    extra "Codex turn timer (patch cxstatusline wrapper)" "Edit ~/.local/bin/codex: set CXSTATUSLINE_COMMAND='python3 ~/.config/cxstatusline/turn-renderer.py'" \
-      sed -i '' "s#^CXSTATUSLINE_COMMAND=.*#CXSTATUSLINE_COMMAND='python3 $HOME/.config/cxstatusline/turn-renderer.py'#" ~/.local/bin/codex
-  fi
+  # Ignore app-bundled alphas, which have no statusline prebuilt.
+  extra "Codex stable updates" "cxstatusline policy set stable-minors" cxstatusline policy set stable-minors
 
   # Editor extensions
   for editor in "code:vscode:VS Code" "cursor:cursor:Cursor"; do
