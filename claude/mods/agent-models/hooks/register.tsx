@@ -37,13 +37,16 @@ export function jobFor(agent: { startTime: number }, jobs: CodexJob[]): CodexJob
 }
 
 let jobs: CodexJob[] = [] // module cache, rebuilt each tick (a reload starts it over)
+let debug = '' // with AGENT_MODELS_DEBUG=1, what the last refresh saw, drawn above the prompt
 
 async function refresh($: EngineInterface) {
+  let err = ''
   const home = await $.env.get('HOME')
   const sid = await $.session.id()
   const root = `${home}/.claude/plugins/data/codex-openai-codex/state`
   const running: Omit<CodexJob, 'model' | 'tokens'>[] = []
-  for (const dir of await $.fs.list(root).catch(() => [])) {
+  const dirs = await $.fs.list(root).catch((e: unknown) => { err = `list failed: ${e}`; return [] })
+  for (const dir of dirs) {
     if (dir.kind !== 'dir') continue
     const text = await $.fs.read(`${root}/${dir.name}/state.json`).catch(() => '')
     if (typeof text !== 'string' || !text) continue
@@ -58,7 +61,8 @@ async function refresh($: EngineInterface) {
   const ids = running.map(j => j.threadId).filter((t): t is string => !!t && /^[0-9a-f-]+$/.test(t))
   if (ids.length) {
     const sql = `select id, model, tokens_used from threads where id in (${ids.map(i => `'${i}'`).join(',')})`
-    const out = await $.process.run(['sqlite3', '-readonly', `${home}/.codex/state_5.sqlite`, sql], { timeoutMs: 3000 }).catch(() => null)
+    const out = await $.process.run(['sqlite3', '-readonly', `${home}/.codex/state_5.sqlite`, sql], { timeoutMs: 3000 })
+      .catch((e: unknown) => { err = `sqlite3 failed: ${e}`; return null })
     for (const line of out?.stdout.split('\n') ?? []) {
       const [id, model, used] = line.split('|')
       if (id) threads.set(id, { model: model ?? 'codex', tokens: Number(used) || 0 })
@@ -66,14 +70,15 @@ async function refresh($: EngineInterface) {
   }
   const next = running.map(j => ({ ...j, model: threads.get(j.threadId ?? '')?.model ?? 'codex', tokens: threads.get(j.threadId ?? '')?.tokens ?? 0 }))
   jobs = next
+  if (await $.env.get('AGENT_MODELS_DEBUG')) debug = `sid ${sid.slice(0, 8)} · ${dirs.length} dirs · ${running.length} running · ${threads.size} threads${err ? ' · ' + err : ''}`
   // Redraw each tick: elapsed times, tokens and the viewed agent's context move.
   $.ui.invalidate('ui.render')
 }
 
 export const register: Register = on => {
   on('session.start', async ($, e, next) => {
-    await refresh($).catch(() => {})
-    $.clock.every(REFRESH_MS, () => { refresh($).catch(() => {}) })
+    await refresh($).catch((err: unknown) => { debug = `refresh failed: ${err}` })
+    $.clock.every(REFRESH_MS, () => { refresh($).catch((err: unknown) => { debug = `refresh failed: ${err}` }) })
     return next(e)
   })
 
@@ -101,6 +106,7 @@ export const register: Register = on => {
     for (const j of jobs) {
       rows.push(`◆ codex ${shortModel(j.model)} · ${tokens(j.tokens)} tokens · ${elapsed(now - Date.parse(j.startedAt))} · ${j.title ?? j.id}`)
     }
+    if (debug) rows.push(`agent-models: ${debug}`)
     if (!rows.length) return next(e)
     const { Box, Text } = $.ui.resolve(e)
     return (
