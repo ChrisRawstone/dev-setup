@@ -70,9 +70,12 @@ changes right away, even when it holds my unrelated uncommitted or staged work; 
 Personal MCP servers (`marketplace-railway`, `home-assistant`, `railway`, `apify`, `ms365-personal`, `kiwi`; kiwi is off for now via `disabledMcpjsonServers` in `claude/settings.json`, until I turn it back on) live in
 `~/Repos/personal/.mcp.json`, which every repo and worktree below it picks up (`~/scratch` has them at local scope).
 Add a new personal server there, never at user scope, so work sessions never see it. Each personal folder's
-`.claude/settings.local.json` enables homeclaw, denies the work connectors (Notion, Slack, HS CV Machine, HS Proposal
+`.claude/settings.local.json` denies the work connectors (Notion, Slack, HS CV Machine, HS Proposal
 Search, Databricks, claude.ai Microsoft 365) and hides the Halfspace skills (`hs-ai-skills@synced`,
-`halfspace-slides`): give a new personal repo a copy of `~/scratch/.claude/settings.local.json`. The cloudflare plugin
+`halfspace-slides`): give a new personal repo a copy of `~/scratch/.claude/settings.local.json`. homeclaw (HomeKit) is on
+only in root, `scratch`, `home-assistant` and `ikea-to-apple-home` (it starts a node server each session), so set
+`"homeclaw@homeclaw": false` in a new repo's copy unless it's about the home. Work repos deny the claude.ai Booking.com
+connector the same way, in each work repo's gitignored `.claude/settings.local.json`. The cloudflare plugin
 is on only where it's used (root, `scratch`, `sites`, `dev-setup`, `aps-autopilot`, `home-assistant`, `trip-planner`),
 to keep its skills out of every other session; turn it on in a repo that needs DNS.
 
