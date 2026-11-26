@@ -143,6 +143,8 @@ themselves, so run `./sync.sh` to pull their changes back into the repo before c
 | `codex/config.base.toml` | `~/.codex/config.toml` (only if it doesn't exist yet) |
 | `herdr-app/settings.json` | `~/.config/herdr-app/settings.json` (only if it doesn't exist yet) |
 | `cursor/hooks.json` | `~/.cursor/hooks.json` |
+| `agents/global/AGENTS.md` with an `alwaysApply` header | `~/.cursor/rules/global.mdc` (Cursor reads folder `AGENTS.md` files and `~/.claude/skills` on its own, not `~/.claude/CLAUDE.md`) |
+| `statusLine` key (runs `claude/statusline.sh` with `STATUSLINE_AGENT=cursor`) | merged into `~/.cursor/cli-config.json`, which Cursor CLI rewrites itself |
 | `ssh/config` (host aliases only, never keys) | `~/.ssh/config` |
 
 Anything already at a destination is moved to `<dest>.pre-dotfiles-<timestamp>`, never deleted.

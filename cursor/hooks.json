@@ -4,6 +4,16 @@
       {
         "command": "bash '__HOME__/.cursor/herdr-agent-state.sh' session"
       }
+    ],
+    "beforeSubmitPrompt": [
+      {
+        "command": "__HOME__/.claude/turn-timer.sh start"
+      }
+    ],
+    "stop": [
+      {
+        "command": "__HOME__/.claude/turn-timer.sh stop"
+      }
     ]
   },
   "version": 1

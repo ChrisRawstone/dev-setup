@@ -60,7 +60,8 @@ IFS=$'\037' read -r MODEL SESSION_ID EFFORT CWD CTX_SIZE CTX_SIZE_FMT CTX_PCT_I 
   COST_FMT DUR_MS LINES_ADD LINES_DEL R5_PCT R5_RESET R7_PCT R7_RESET BRANCH NOW <<< "$JQ_ROW"
 
 # Codex's footer runs this script too (cxstatusline/render.sh sets STATUSLINE_AGENT=codex):
-# it has its own limits, no cost and no Fable.
+# it has its own limits, no cost and no Fable. Cursor CLI's statusLine sends a Claude-shaped
+# payload (STATUSLINE_AGENT=cursor via cli-config.json): no limits, cost or duration in it.
 
 # ---- helpers ---------------------------------------------------------------
 
@@ -195,7 +196,7 @@ STALE_MARK=""
 # statusline-fable holds "<pct> <resets_at> <fetched_at>"; rewriting fetched_at before
 # the fetch keeps parallel sessions from all fetching at once.
 FB_PCT=-1 AS_PCT=-1
-if [ -z "$STATUSLINE_AGENT" ]; then
+if [ "$STATUSLINE_AGENT" != codex ]; then
   FABLE_FILE="${HOME}/.claude/cache/statusline-fable" ASTRA_FILE="${HOME}/.claude/cache/statusline-astra"
   F_PCT="" F_RESET=0 F_AT=0 A_PCT="" A_RESET=0 A_OK=true
   [ -r "$FABLE_FILE" ] && IFS=$'\037' read -r F_PCT F_RESET F_AT < "$FABLE_FILE"
@@ -228,7 +229,9 @@ fi
 
 L2_PARTS=()
 
-if [ "$R5_PCT" = "-1" ] && [ "$R7_PCT" = "-1" ]; then
+if [ "$STATUSLINE_AGENT" = cursor ]; then
+  :
+elif [ "$R5_PCT" = "-1" ] && [ "$R7_PCT" = "-1" ]; then
   L2_PARTS+=("${C_DIM}${DIM}usage limits unavailable${RESET}")
 else
   if [ "$R5_PCT" != "-1" ]; then
@@ -254,7 +257,7 @@ if [ "$AS_PCT" != "-1" ]; then
 fi
 
 [ -z "$STATUSLINE_AGENT" ] && L2_PARTS+=("${C_COST}\$${COST_FMT}${RESET}")
-L2_PARTS+=("${C_DIM}session${RESET} ${C_DUR}${DUR_FMT}${RESET}")
+[ "$STATUSLINE_AGENT" != cursor ] && L2_PARTS+=("${C_DIM}session${RESET} ${C_DUR}${DUR_FMT}${RESET}")
 if [ -n "$TURN_FMT" ]; then
   if [ "$TURN_RUNNING" = 1 ]; then
     L2_PARTS+=("${C_DIM}turn${RESET} ${C_TURN}▸ ${TURN_FMT}${RESET}")
@@ -262,7 +265,7 @@ if [ -n "$TURN_FMT" ]; then
     L2_PARTS+=("${C_DIM}turn${RESET} ${C_DIM}${TURN_FMT}${RESET}")
   fi
 fi
-L2_PARTS+=("${C_ADD}+${LINES_ADD}${RESET} ${C_DEL}-${LINES_DEL}${RESET}")
+[ "$STATUSLINE_AGENT" != cursor ] && L2_PARTS+=("${C_ADD}+${LINES_ADD}${RESET} ${C_DEL}-${LINES_DEL}${RESET}")
 
 LINE2=""
 first=1

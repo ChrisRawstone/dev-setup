@@ -6,10 +6,11 @@
 # Mac every process start costs a lot while Claude is busy.
 zmodload zsh/datetime
 IN=$(</dev/stdin)
-[[ $IN =~ '"session_id" *: *"([A-Za-z0-9_-]+)"' ]] || exit 0
+# Cursor's hooks send conversation_id: the session_id its status line gets
+[[ $IN =~ '"(session|conversation)_id" *: *"([A-Za-z0-9_-]+)"' ]] || exit 0
 DIR=$HOME/.claude/cache/turn-timer
 [[ -d $DIR ]] || mkdir -p $DIR
-F=$DIR/$match[1]
+F=$DIR/$match[2]
 case $1 in
   start) print "$EPOCHSECONDS 0" > $F ;;
   stop)

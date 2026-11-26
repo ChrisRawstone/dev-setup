@@ -82,7 +82,18 @@ if command -v cxstatusline >/dev/null; then
   out=$(echo '{"payload_version":1,"model":{"name":"gpt"},"session":{"id":"t1","cwd":"/tmp"},"usage":{}}' | ~/.local/bin/cxstatusline render 2>&1) \
     && pass "Codex statusline renders: $(echo "$out" | sed $'s/\x1b\\[[0-9;]*m//g' | head -1)" || fail "Codex statusline: $out"
 fi
-echo '{"session_id":"t1"}' | ~/.claude/turn-timer.sh start && echo '{"session_id":"t1"}' | ~/.claude/turn-timer.sh stop \
+cmd=$(jq -r '.statusLine.command // empty' ~/.cursor/cli-config.json 2>/dev/null)
+if [[ -n $cmd ]]; then
+  # Cursor starts the command without a shell, so run its words the same way
+  out=$(echo '{"session_id":"t1","model":{"display_name":"Grok"},"workspace":{"current_dir":"/tmp"},"context_window":{}}' | $cmd 2>&1) \
+    && pass "Cursor statusline renders: $(echo "$out" | sed $'s/\x1b\\[[0-9;]*m//g' | head -1)" || fail "Cursor statusline: $out"
+else
+  fail "no statusLine in ~/.cursor/cli-config.json"
+fi
+grep -qs '^alwaysApply: true' ~/.cursor/rules/global.mdc && pass "Cursor global rule" || fail "no ~/.cursor/rules/global.mdc"
+echo '{"conversation_id":"t2"}' | ~/.claude/turn-timer.sh start && [[ -r ~/.claude/cache/turn-timer/t2 ]] \
+  && pass "turn-timer takes Cursor's conversation_id" || fail "turn-timer with conversation_id"
+echo '{"session_id":"t1"}' | ~/.claude/turn-timer.sh start &&echo '{"session_id":"t1"}' | ~/.claude/turn-timer.sh stop \
   && pass "turn-timer start/stop" || fail "turn-timer"
 
 echo

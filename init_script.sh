@@ -278,6 +278,18 @@ render_config "codex/config.base.toml" "$HOME/.codex/config.toml" --if-missing
 # Cursor
 link_config "cursor/herdr-agent-state.sh" "$HOME/.cursor/herdr-agent-state.sh"
 render_config "cursor/hooks.json" "$HOME/.cursor/hooks.json"
+# Cursor reads folder AGENTS.md files and ~/.claude/skills itself, but not ~/.claude/CLAUDE.md:
+# give it the global instructions as an always-on user rule (only Cursor reads .cursor/rules).
+mkdir -p "$HOME/.cursor/rules"
+{ printf -- '---\ndescription: Global instructions (dev-setup agents/global/AGENTS.md)\nalwaysApply: true\n---\n\n'
+  cat "$DOTFILES_DIR/agents/global/AGENTS.md"; } > "$HOME/.cursor/rules/global.mdc"
+# Cursor CLI rewrites cli-config.json (temp file + rename), so merge the status line into it, not link it.
+# A timed-out render is not retried until the session changes: give a slow (busy Mac) start room.
+CCFG="$HOME/.cursor/cli-config.json"
+[[ -s "$CCFG" ]] || echo '{"version":1}' > "$CCFG"
+command -v jq >/dev/null && jq --arg c "/usr/bin/env STATUSLINE_AGENT=cursor $HOME/.claude/statusline.sh" \
+  '.statusLine = {type: "command", command: $c, timeoutMs: 10000}' "$CCFG" > "$CCFG.tmp" && mv "$CCFG.tmp" "$CCFG"
+rm -f "$CCFG.tmp"
 
 # Statuslines
 link_config "ccstatusline/settings.json" "$HOME/.config/ccstatusline/settings.json"
