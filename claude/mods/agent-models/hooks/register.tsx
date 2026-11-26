@@ -36,6 +36,27 @@ export function jobFor(agent: { startTime: number }, jobs: CodexJob[]): CodexJob
     .sort((a, b) => Date.parse(a.startedAt) - Date.parse(b.startedAt))[0]
 }
 
+type AgentCall = { description?: string; subagent_type?: string; model?: string }
+
+/** The agent an Agent call started: by the agentId in its result, else by its description. */
+export function agentFor(input: unknown, output: unknown, agents: AgentInfo[]): AgentInfo | undefined {
+  const id = JSON.stringify(output ?? '').match(/agentId["\\:\s]+([A-Za-z0-9_-]+)/)?.[1]
+  const desc = (input as AgentCall | undefined)?.description
+  return agents.find(a => a.id === id) ?? agents.filter(a => a.description === desc).sort((x, y) => y.startTime - x.startTime)[0]
+}
+
+/** "model opus 5.5", "codex astra", or the model the call asked for once the agent is gone. */
+export function modelLine(a: AgentInfo | undefined, input: unknown): string {
+  const call = (input as AgentCall | undefined) ?? {}
+  const type = a?.type ?? call.subagent_type ?? ''
+  if (type.startsWith('codex')) {
+    const job = a ? jobFor(a, jobs) : undefined
+    return `codex ${job ? shortModel(job.model) : ''}`.trim()
+  }
+  if (a?.model) return `model ${shortModel(a.model)}`
+  return call.model ? `model ${call.model}` : ''
+}
+
 let jobs: CodexJob[] = [] // module cache, rebuilt each tick (a reload starts it over)
 let debug = '' // with AGENT_MODELS_DEBUG=1, what the last refresh saw, drawn above the prompt
 
@@ -88,6 +109,22 @@ export const register: Register = on => {
     const job = p.type.startsWith('codex') ? jobFor(p, jobs) : undefined
     const tag = p.type.startsWith('codex') ? `codex ${job ? shortModel(job.model) : ''}`.trim() : shortModel(p.model)
     return next({ ...e, props: { ...p, label: `[${tag}] ${p.label}` } })
+  })
+
+  // Agent call rows in the chat: a dim line with the model the subagent runs on.
+  on('ui.render', { component: 'ToolUse' }, async ($, e, next) => {
+    const p = e.props
+    if (p.tool !== 'Agent') return next(e)
+    const a = agentFor(p.input, p.output, await $.agent.list())
+    const line = modelLine(a, p.input)
+    if (!line) return next(e)
+    const { Box, Text } = $.ui.resolve(e)
+    return (
+      <Box flexDirection="column">
+        {await next(e)}
+        <Text dimColor>{`  ⎿  ${line}`}</Text>
+      </Box>
+    )
   })
 
   // Above the prompt: the viewed subagent, and Codex jobs of this session.
