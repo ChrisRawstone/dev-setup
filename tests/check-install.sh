@@ -79,8 +79,8 @@ else
   fail "statusline rc=$rc: $out"
 fi
 if command -v cxstatusline >/dev/null; then
-  node -e "import('$HOME/.config/cxstatusline/turn-renderer.mjs').then(m => process.exit(m.RENDERER ? 0 : 1))" \
-    && pass "Codex statusline finds cxstatusline" || fail "turn-renderer.mjs can't find cxstatusline"
+  out=$(echo '{"payload_version":1,"model":{"name":"gpt"},"session":{"id":"t1","cwd":"/tmp"},"usage":{}}' | ~/.local/bin/cxstatusline render 2>&1) \
+    && pass "Codex statusline renders: $(echo "$out" | sed $'s/\x1b\\[[0-9;]*m//g' | head -1)" || fail "Codex statusline: $out"
 fi
 echo '{"session_id":"t1"}' | ~/.claude/turn-timer.sh start && echo '{"session_id":"t1"}' | ~/.claude/turn-timer.sh stop \
   && pass "turn-timer start/stop" || fail "turn-timer"

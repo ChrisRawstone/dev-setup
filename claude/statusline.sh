@@ -1,8 +1,8 @@
-#!/usr/bin/env bash
+#!/bin/bash
 # Premium jewel-toned statusline for Claude Code, no bars, no bold.
 # Reads the statusLine JSON payload from stdin and renders a 2-line widget.
-
-INPUT="$(cat)"
+# Keep it nearly fork-free (one jq, builtins for the rest): at Claude/Codex startup
+# every new process on this Mac takes up to seconds, and the bar waits for this script.
 
 # ---- palette (24-bit truecolor) — a distinct jewel tone per category ------
 RESET=$'\033[0m'
@@ -30,90 +30,93 @@ SEP="${C_DIM} · ${RESET}"
 # it regardless of what IFS is set to, which silently eats empty fields. Use
 # a non-whitespace delimiter (\x1f, unit separator) to avoid that.
 JQ_ROW="$(jq -r '
-    [
+    def tok: if . >= 1000000 then (. / 100000 | round / 10 | tostring) + "M"
+             elif . >= 1000 then (. / 100 | round / 10 | tostring) + "k" else tostring end;
+    def int: floor | tostring;
+    (.context_window.current_usage // {}) as $u
+    | [
       (.model.display_name // "Claude"),
       (.session_id // ""),
       (.effort.level // ""),
       (.workspace.current_dir // .cwd // "."),
-      (.context_window.context_window_size // 0),
-      (.context_window.used_percentage // 0),
-      (.context_window.current_usage.input_tokens // 0),
-      (.context_window.current_usage.cache_creation_input_tokens // 0),
-      (.context_window.current_usage.cache_read_input_tokens // 0),
-      (.cost.total_cost_usd // 0),
-      (.cost.total_duration_ms // 0),
-      (.cost.total_lines_added // 0),
-      (.cost.total_lines_removed // 0),
-      (.rate_limits.five_hour.used_percentage // -1),
-      (.rate_limits.five_hour.resets_at // 0),
-      (.rate_limits.seven_day.used_percentage // -1),
-      (.rate_limits.seven_day.resets_at // 0)
-    ] | @tsv
-  ' <<< "$INPUT" | tr '\t' '\037')"
+      (.context_window.context_window_size // 0 | tostring),
+      (.context_window.context_window_size // 0 | tok),
+      (.context_window.used_percentage // 0 | int),
+      (($u.input_tokens // 0) + ($u.cache_creation_input_tokens // 0) + ($u.cache_read_input_tokens // 0) | tok),
+      (.cost.total_cost_usd // 0 | . * 100 | round | tostring | if length < 3 then ("00" + .)[-3:] else . end | .[:-2] + "." + .[-2:]),
+      (.cost.total_duration_ms // 0 | int),
+      (.cost.total_lines_added // 0 | tostring),
+      (.cost.total_lines_removed // 0 | tostring),
+      (.rate_limits.five_hour.used_percentage // -1 | int),
+      (.rate_limits.five_hour.resets_at // 0 | int),
+      (.rate_limits.seven_day.used_percentage // -1 | int),
+      (.rate_limits.seven_day.resets_at // 0 | int),
+      (.workspace.git_branch // ""),
+      (now | int)
+    ] | join("\u001f")
+  ')"
 
-IFS=$'\037' read -r MODEL SESSION_ID EFFORT CWD \
-  CTX_SIZE CTX_PCT CTX_IN CTX_CC CTX_CR \
-  COST DUR_MS LINES_ADD LINES_DEL \
-  R5_PCT R5_RESET R7_PCT R7_RESET <<< "$JQ_ROW"
+IFS=$'\037' read -r MODEL SESSION_ID EFFORT CWD CTX_SIZE CTX_SIZE_FMT CTX_PCT_I CTX_USED_FMT \
+  COST_FMT DUR_MS LINES_ADD LINES_DEL R5_PCT R5_RESET R7_PCT R7_RESET BRANCH NOW <<< "$JQ_ROW"
 
-NOW="$(date +%s)"
+# Codex's footer runs this script too (cxstatusline/render.sh sets STATUSLINE_AGENT=codex):
+# it has its own limits, no cost and no Fable.
 
 # ---- helpers ---------------------------------------------------------------
 
-# integer part of a possibly-decimal string, e.g. "8.5" -> "8"
-int_part() { local v="${1%.*}"; [ -z "$v" ] && v=0; echo "$v"; }
-
-pct_color() {
-  local p="$1"
-  if   (( p >= 90 )); then echo "$C_CRIT"
-  elif (( p >= 70 )); then echo "$C_WARN"
-  else                     echo "$C_GOOD"
+# Each helper sets a variable rather than printing, so callers need no $(...) fork.
+pct_color() {  # -> COLOR
+  if   (( $1 >= 90 )); then COLOR="$C_CRIT"
+  elif (( $1 >= 70 )); then COLOR="$C_WARN"
+  else                      COLOR="$C_GOOD"
   fi
 }
 
-fmt_tokens() {
-  local n="$1"
-  if [ "$n" -ge 1000000 ] 2>/dev/null; then
-    awk -v n="$n" 'BEGIN{v=n/1000000; if (v==int(v)) printf "%dM", v; else printf "%.1fM", v}'
-  elif [ "$n" -ge 1000 ] 2>/dev/null; then
-    awk -v n="$n" 'BEGIN{v=n/1000; if (v==int(v)) printf "%dk", v; else printf "%.1fk", v}'
-  else
-    printf '%d' "$n"
-  fi
-}
-
-fmt_eta() {
-  local target="$1"
-  (( target <= 0 )) && { echo "—"; return; }
-  local diff=$(( target - NOW ))
-  if (( diff <= 0 )); then echo "now"; return; fi
+fmt_eta() {  # -> ETA
+  local diff=$(( $1 - NOW ))
+  if (( $1 <= 0 )); then ETA="—"; return; fi
+  if (( diff <= 0 )); then ETA="now"; return; fi
   local d=$(( diff / 86400 )) h=$(( (diff % 86400) / 3600 )) m=$(( (diff % 3600) / 60 ))
-  if   (( d > 0 )); then echo "${d}d${h}h"
-  elif (( h > 0 )); then echo "${h}h${m}m"
-  else                   echo "${m}m"
+  if   (( d > 0 )); then ETA="${d}d${h}h"
+  elif (( h > 0 )); then ETA="${h}h${m}m"
+  else                   ETA="${m}m"
   fi
 }
 
-fmt_duration() {
-  local ms="$1"
-  local sec=$(( ms / 1000 ))
+fmt_duration() {  # -> DUR
+  local sec=$(( $1 / 1000 ))
   local h=$(( sec / 3600 )) m=$(( (sec % 3600) / 60 )) s=$(( sec % 60 ))
-  if   (( h > 0 )); then echo "${h}h${m}m"
-  elif (( m > 0 )); then echo "${m}m${s}s"
-  else                   echo "${s}s"
+  if   (( h > 0 )); then DUR="${h}h${m}m"
+  elif (( m > 0 )); then DUR="${m}m${s}s"
+  else                   DUR="${s}s"
   fi
+}
+
+# Branch from .git/HEAD (a worktree's .git file points at its gitdir), without running git.
+git_branch() {  # -> BRANCH
+  local d="$1" head="" line
+  while [ -n "$d" ]; do
+    if [ -d "$d/.git" ]; then head="$d/.git/HEAD"; break; fi
+    if [ -f "$d/.git" ]; then
+      read -r line < "$d/.git"; line="${line#gitdir: }"
+      [ "${line#/}" = "$line" ] && line="$d/$line"
+      head="$line/HEAD"; break
+    fi
+    [ "$d" = / ] && break
+    d="${d%/*}"; [ -z "$d" ] && d=/
+  done
+  [ -r "$head" ] || return
+  read -r line < "$head"
+  case "$line" in
+    "ref: refs/heads/"*) BRANCH="${line#ref: refs/heads/}" ;;
+    ?*) BRANCH="detached:${line:0:7}" ;;
+  esac
 }
 
 # ---- derived values ---------------------------------------------------
 
-CTX_PCT_I="$(int_part "$CTX_PCT")"
-CTX_USED=$(( CTX_IN + CTX_CC + CTX_CR ))
-CTX_USED_FMT="$(fmt_tokens "$CTX_USED")"
-CTX_SIZE_FMT="$(fmt_tokens "$CTX_SIZE")"
-CTX_COLOR="$(pct_color "$CTX_PCT_I")"
-
-COST_FMT="$(printf '%.2f' "$COST" 2>/dev/null || echo "0.00")"
-DUR_FMT="$(fmt_duration "$DUR_MS")"
+pct_color "$CTX_PCT_I"; CTX_COLOR="$COLOR"
+fmt_duration "$DUR_MS"; DUR_FMT="$DUR"
 
 SESSION_SHORT="${SESSION_ID:0:8}"
 
@@ -125,18 +128,11 @@ if [ -n "$SESSION_ID" ] && [ -r "$TURN_FILE" ]; then
   read -r T_START T_STOP < "$TURN_FILE"
   if [ -n "$T_START" ] && (( T_START > 0 )); then
     if (( T_STOP == 0 )); then T_END="$NOW"; TURN_RUNNING=1; else T_END="$T_STOP"; fi
-    TURN_FMT="$(fmt_duration $(( (T_END - T_START) * 1000 )))"
+    fmt_duration $(( (T_END - T_START) * 1000 )); TURN_FMT="$DUR"
   fi
 fi
 
-BRANCH=""
-if command -v git >/dev/null 2>&1; then
-  BRANCH="$(git -C "$CWD" branch --show-current 2>/dev/null)"
-  if [ -z "$BRANCH" ]; then
-    SHORTHASH="$(git -C "$CWD" rev-parse --short HEAD 2>/dev/null)"
-    [ -n "$SHORTHASH" ] && BRANCH="detached:${SHORTHASH}"
-  fi
-fi
+[ -z "$BRANCH" ] && git_branch "$CWD"
 
 # ---- line 1: identity (model / branch / effort / session) + context ------
 
@@ -145,7 +141,10 @@ L1_PARTS+=("${C_MODEL}${MODEL}${RESET}")
 [ -n "$BRANCH" ] && L1_PARTS+=("${C_BRANCH}⎇ ${BRANCH}${RESET}")
 [ -n "$EFFORT" ] && L1_PARTS+=("${C_EFFORT}eff ${EFFORT}${RESET}")
 [ -n "$SESSION_SHORT" ] && L1_PARTS+=("${C_SESSION}${DIM}${SESSION_SHORT}${RESET}")
-L1_PARTS+=("${C_DIM}ctx${RESET} ${CTX_COLOR}${CTX_PCT_I}%${RESET} ${C_DIM}(${C_TEXT}${CTX_USED_FMT}${C_DIM}/${CTX_SIZE_FMT})${RESET}")
+CTX_PART="${C_DIM}ctx${RESET} ${CTX_COLOR}${CTX_PCT_I}%${RESET}"
+# Codex reports no window size until its first turn
+[ "$CTX_SIZE" != 0 ] && CTX_PART+=" ${C_DIM}(${C_TEXT}${CTX_USED_FMT}${C_DIM}/${CTX_SIZE_FMT})${RESET}"
+L1_PARTS+=("$CTX_PART")
 
 LINE1=""
 first=1
@@ -162,24 +161,28 @@ done
 # the future — past that the window has rolled over and its old percentage is
 # meaningless. Cached values render with a dim "~" so they read as estimates.
 
-CACHE_FILE="${HOME}/.claude/cache/statusline-rate-limits"
+CACHE_FILE="${HOME}/.claude/cache/statusline-rate-limits${STATUSLINE_AGENT:+-$STATUSLINE_AGENT}"
 STALE=0
 
-if [ "$R5_PCT" != "-1" ]; then
-  mkdir -p "${CACHE_FILE%/*}" 2>/dev/null
-  TMP="${CACHE_FILE}.$$"
-  if printf '%s\037%s\037%s\037%s\n' \
-       "$R5_PCT" "$R5_RESET" "$R7_PCT" "$R7_RESET" > "$TMP" 2>/dev/null; then
-    mv -f "$TMP" "$CACHE_FILE" 2>/dev/null || rm -f "$TMP" 2>/dev/null
-  else
-    rm -f "$TMP" 2>/dev/null
+if [ "$R5_PCT" != "-1" ] || [ "$R7_PCT" != "-1" ]; then
+  # Rewrite only on change: a run killed between printf and mv leaves its temp file behind.
+  NEW_ROW="${R5_PCT}"$'\037'"${R5_RESET}"$'\037'"${R7_PCT}"$'\037'"${R7_RESET}"
+  OLD_ROW=""; [ -r "$CACHE_FILE" ] && read -r OLD_ROW < "$CACHE_FILE"
+  if [ "$NEW_ROW" != "$OLD_ROW" ]; then
+    [ -d "${CACHE_FILE%/*}" ] || mkdir -p "${CACHE_FILE%/*}" 2>/dev/null
+    TMP="${CACHE_FILE}.$$"
+    if printf '%s\n' "$NEW_ROW" > "$TMP" 2>/dev/null; then
+      mv -f "$TMP" "$CACHE_FILE" 2>/dev/null || rm -f "$TMP" 2>/dev/null
+    else
+      rm -f "$TMP" 2>/dev/null
+    fi
   fi
 elif [ -r "$CACHE_FILE" ]; then
   IFS=$'\037' read -r C5_PCT C5_RESET C7_PCT C7_RESET < "$CACHE_FILE"
-  if [ -n "$C5_PCT" ] && [ "$C5_PCT" != "-1" ] && (( $(int_part "$C5_RESET") > NOW )); then
+  if [ -n "$C5_PCT" ] && [ "$C5_PCT" != "-1" ] && (( ${C5_RESET%.*} > NOW )); then
     R5_PCT="$C5_PCT"; R5_RESET="$C5_RESET"; STALE=1
   fi
-  if [ -n "$C7_PCT" ] && [ "$C7_PCT" != "-1" ] && (( $(int_part "$C7_RESET") > NOW )); then
+  if [ -n "$C7_PCT" ] && [ "$C7_PCT" != "-1" ] && (( ${C7_RESET%.*} > NOW )); then
     R7_PCT="$C7_PCT"; R7_RESET="$C7_RESET"; STALE=1
   fi
 fi
@@ -189,26 +192,31 @@ STALE_MARK=""
 
 # ---- Fable weekly window ----------------------------------------------------
 # Not in the statusLine payload, so read it from the usage endpoint /usage uses,
-# in the background at most every 2 min (touching the file first keeps parallel
-# sessions from fetching at once); this render shows the last fetched value.
-FABLE_FILE="${HOME}/.claude/cache/statusline-fable"
-if [ ! -f "$FABLE_FILE" ] || (( NOW - $(stat -f %m "$FABLE_FILE") > 120 )); then
-  mkdir -p "${FABLE_FILE%/*}" 2>/dev/null; touch "$FABLE_FILE"
-  (
-    TOKEN="$(security find-generic-password -s 'Claude Code-credentials' -w 2>/dev/null | jq -r '.claudeAiOauth.accessToken // empty')"
-    [ -n "$TOKEN" ] || exit 0
-    curl -sf -m 10 https://api.anthropic.com/api/oauth/usage \
-        -H "Authorization: Bearer ${TOKEN}" -H 'anthropic-beta: oauth-2025-04-20' \
-      | jq -r 'first(.limits[]? | select(.kind == "weekly_scoped" and .scope.model.display_name == "Fable"))
-               | "\(.percent)\u001f\(.resets_at[0:19] + "Z" | fromdateiso8601)"' > "${FABLE_FILE}.$$" \
-      && [ -s "${FABLE_FILE}.$$" ] && mv -f "${FABLE_FILE}.$$" "$FABLE_FILE"
-    rm -f "${FABLE_FILE}.$$"
-  ) </dev/null >/dev/null 2>&1 &
-fi
+# in the background at most every 2 min; this render shows the last fetched value.
+# The file is "<pct> <resets_at> <fetched_at>"; rewriting fetched_at before the
+# fetch keeps parallel sessions from all fetching at once.
 FB_PCT=-1
-IFS=$'\037' read -r F_PCT F_RESET < "$FABLE_FILE" 2>/dev/null
-# A window whose reset has passed rolled over; its old percentage means nothing.
-[ -n "$F_PCT" ] && (( $(int_part "${F_RESET:-0}") > NOW )) && FB_PCT="$F_PCT" FB_RESET="$F_RESET"
+if [ -z "$STATUSLINE_AGENT" ]; then
+  FABLE_FILE="${HOME}/.claude/cache/statusline-fable"
+  F_PCT="" F_RESET=0 F_AT=0
+  [ -r "$FABLE_FILE" ] && IFS=$'\037' read -r F_PCT F_RESET F_AT < "$FABLE_FILE"
+  if (( NOW - ${F_AT:-0} > 120 )); then
+    [ -d "${FABLE_FILE%/*}" ] || mkdir -p "${FABLE_FILE%/*}" 2>/dev/null
+    printf '%s\037%s\037%s\n' "$F_PCT" "${F_RESET:-0}" "$NOW" > "$FABLE_FILE"
+    (
+      TOKEN="$(security find-generic-password -s 'Claude Code-credentials' -w 2>/dev/null | jq -r '.claudeAiOauth.accessToken // empty')"
+      [ -n "$TOKEN" ] || exit 0
+      curl -sf -m 10 https://api.anthropic.com/api/oauth/usage \
+          -H "Authorization: Bearer ${TOKEN}" -H 'anthropic-beta: oauth-2025-04-20' \
+        | jq -r --arg at "$NOW" 'first(.limits[]? | select(.kind == "weekly_scoped" and .scope.model.display_name == "Fable"))
+                 | "\(.percent)\u001f\(.resets_at[0:19] + "Z" | fromdateiso8601)\u001f\($at)"' > "${FABLE_FILE}.$$" \
+        && [ -s "${FABLE_FILE}.$$" ] && mv -f "${FABLE_FILE}.$$" "$FABLE_FILE"
+      rm -f "${FABLE_FILE}.$$"
+    ) </dev/null >/dev/null 2>&1 &
+  fi
+  # A window whose reset has passed rolled over; its old percentage means nothing.
+  [ -n "$F_PCT" ] && (( ${F_RESET%.*} > NOW )) && FB_PCT="$F_PCT" FB_RESET="$F_RESET"
+fi
 
 # ---- line 2: usage windows + cost / duration / lines changed --------------
 
@@ -218,26 +226,22 @@ if [ "$R5_PCT" = "-1" ] && [ "$R7_PCT" = "-1" ]; then
   L2_PARTS+=("${C_DIM}${DIM}usage limits unavailable${RESET}")
 else
   if [ "$R5_PCT" != "-1" ]; then
-    R5_PCT_I="$(int_part "$R5_PCT")"
-    R5_COLOR="$(pct_color "$R5_PCT_I")"
-    R5_ETA="$(fmt_eta "$R5_RESET")"
-    L2_PARTS+=("${C_DIM}5h${RESET} ${STALE_MARK}${R5_COLOR}${R5_PCT_I}%${RESET} ${C_DIM}↺${C_TEXT}${R5_ETA}${RESET}")
+    pct_color "${R5_PCT%.*}"; fmt_eta "${R5_RESET%.*}"
+    L2_PARTS+=("${C_DIM}5h${RESET} ${STALE_MARK}${COLOR}${R5_PCT%.*}%${RESET} ${C_DIM}↺${C_TEXT}${ETA}${RESET}")
   fi
 
   if [ "$R7_PCT" != "-1" ]; then
-    R7_PCT_I="$(int_part "$R7_PCT")"
-    R7_COLOR="$(pct_color "$R7_PCT_I")"
-    R7_ETA="$(fmt_eta "$R7_RESET")"
-    L2_PARTS+=("${C_DIM}7d${RESET} ${STALE_MARK}${R7_COLOR}${R7_PCT_I}%${RESET} ${C_DIM}↺${C_TEXT}${R7_ETA}${RESET}")
+    pct_color "${R7_PCT%.*}"; fmt_eta "${R7_RESET%.*}"
+    L2_PARTS+=("${C_DIM}7d${RESET} ${STALE_MARK}${COLOR}${R7_PCT%.*}%${RESET} ${C_DIM}↺${C_TEXT}${ETA}${RESET}")
   fi
 fi
 
 if [ "$FB_PCT" != "-1" ]; then
-  FB_PCT_I="$(int_part "$FB_PCT")"
-  L2_PARTS+=("${C_DIM}fable${RESET} $(pct_color "$FB_PCT_I")${FB_PCT_I}%${RESET} ${C_DIM}↺${C_TEXT}$(fmt_eta "$FB_RESET")${RESET}")
+  pct_color "${FB_PCT%.*}"; fmt_eta "${FB_RESET%.*}"
+  L2_PARTS+=("${C_DIM}fable${RESET} ${COLOR}${FB_PCT%.*}%${RESET} ${C_DIM}↺${C_TEXT}${ETA}${RESET}")
 fi
 
-L2_PARTS+=("${C_COST}\$${COST_FMT}${RESET}")
+[ -z "$STATUSLINE_AGENT" ] && L2_PARTS+=("${C_COST}\$${COST_FMT}${RESET}")
 L2_PARTS+=("${C_DIM}session${RESET} ${C_DUR}${DUR_FMT}${RESET}")
 if [ -n "$TURN_FMT" ]; then
   if [ "$TURN_RUNNING" = 1 ]; then

@@ -1,6 +1,6 @@
 #!/bin/sh
-# Keep the turn timer outside cxstatusline's self-repairing Codex launcher.
+# Draw the Codex footer with our own renderer (render.sh), outside cxstatusline's self-repairing launcher.
 if [ "$1" = "render" ]; then
-  exec /opt/homebrew/bin/node "$HOME/.config/cxstatusline/turn-renderer.mjs"
+  exec "$HOME/.config/cxstatusline/render.sh"
 fi
 exec /opt/homebrew/bin/node /opt/homebrew/lib/node_modules/cxstatusline/dist/cxstatusline.js "$@"

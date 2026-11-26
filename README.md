@@ -127,7 +127,7 @@ migration (full wipe), but works for any fresh Mac.
 | `statusline.sh`, `turn-timer.sh`, `hooks/` (from `claude/`), `agents/global/AGENTS.md` as `CLAUDE.md` | `~/.claude/` |
 | `codex/herdr-agent-state.sh`, `rules/default.rules` | `~/.codex/` |
 | `cursor/herdr-agent-state.sh` | `~/.cursor/` |
-| `ccstatusline/settings.json`, `cxstatusline/settings.json`, `cxstatusline/turn-renderer.mjs` | `~/.config/ccstatusline/`, `~/.config/cxstatusline/` |
+| `ccstatusline/settings.json`, `cxstatusline/render.sh` (Codex footer, drawn by `claude/statusline.sh`) | `~/.config/ccstatusline/`, `~/.config/cxstatusline/` |
 | `git/gitconfig`, `git/gitconfig-personal`, `git/gitconfig-work` | `~/.gitconfig`, `~/.gitconfig.personal`, `~/.gitconfig.work` (the folder picks the identity: `~/Repos/personal` commits as ChrisRawstone, `~/Repos/work` as work; the work email stays in untracked `~/.gitconfig.local`) |
 | `vscode/User/`, `cursor/User/` settings + keybindings | `~/Library/Application Support/{Code,Cursor}/User/` |
 | `skills/web-preview`, `codex/skills/claude-skill` | `~/.agents/skills/`, `~/.claude/skills/`, `~/.codex/skills/` |
