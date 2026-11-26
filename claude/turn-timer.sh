@@ -1,17 +1,19 @@
-#!/usr/bin/env bash
+#!/bin/zsh -f
 # Records turn start/stop times for the status line's turn timer.
 # Usage: turn-timer.sh start|stop   (hook JSON payload on stdin)
 # State file per session: "<start_epoch> <stop_epoch>" (stop=0 while running).
-SID="$(jq -r '.session_id // empty' 2>/dev/null)"
-[ -z "$SID" ] && exit 0
-DIR="${HOME}/.claude/cache/turn-timer"
-mkdir -p "$DIR" 2>/dev/null
-F="${DIR}/${SID}"
-NOW="$(date +%s)"
-case "$1" in
-  start) echo "$NOW 0" > "$F" ;;
-  stop)  read -r START _ < "$F" 2>/dev/null; [ -n "$START" ] && echo "$START $NOW" > "$F" ;;
+# Builtins only (no jq/date/find): it runs on every prompt and stop, and on this
+# Mac every process start costs a lot while Claude is busy.
+zmodload zsh/datetime
+IN=$(</dev/stdin)
+[[ $IN =~ '"session_id" *: *"([A-Za-z0-9_-]+)"' ]] || exit 0
+DIR=$HOME/.claude/cache/turn-timer
+[[ -d $DIR ]] || mkdir -p $DIR
+F=$DIR/$match[1]
+case $1 in
+  start) print "$EPOCHSECONDS 0" > $F ;;
+  stop)
+    [[ -r $F ]] && read -r START _ < $F && [[ -n $START ]] && print "$START $EPOCHSECONDS" > $F
+    old=($DIR/*(N.mw+1)); (( $#old )) && rm -f $old ;;  # prune state files older than a week
 esac
-# prune state files older than a week
-find "$DIR" -type f -mtime +7 -delete 2>/dev/null
 exit 0
