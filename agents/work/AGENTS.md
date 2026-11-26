@@ -11,3 +11,5 @@ and `~/scratch`; never bring their context, tools or accounts in here.
 - Azure CLI: `christian.raasteen@accenture.com`. Databricks: the `dev` and `prod` profiles in `~/.databrickscfg`.
 - Never use personal MCP servers or accounts here (`marketplace-railway`, `home-assistant`, `railway`, `apify`,
   `ms365-personal`, the ChrisRawstone GitHub account), and never the `notes` skill (my personal Obsidian vault).
+- Cloud Claude Code (`claude --cloud`, claude.ai/code) is approved for work by my manager (2026-11-26): offload
+  heavy jobs there (test suites, builds, Playwright) to spare this Mac.
