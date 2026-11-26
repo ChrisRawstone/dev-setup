@@ -4,3 +4,6 @@
 # written by herdr-app into every mod folder on each run
 herdr-app/mods/*/gpui-kit.d.ts
 herdr-app/mods/*/jsconfig.json
+# written by Claude Code into each mod it loads
+claude/mods/*/.claude-plugin/types/
+claude/mods/*/tsconfig.json

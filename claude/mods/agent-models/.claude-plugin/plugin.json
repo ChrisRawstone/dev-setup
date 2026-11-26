@@ -1,0 +1,1 @@
+{ "name": "agent-models", "version": "0.1.0", "description": "Shows each subagent's model in the agent list, the viewed agent and running Codex jobs above the prompt" }

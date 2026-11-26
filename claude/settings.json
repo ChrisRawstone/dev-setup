@@ -20,6 +20,9 @@
     "apify",
     "ms365-personal"
   ],
+  "disabledMcpjsonServers": [
+    "kiwi"
+  ],
   "skillOverrides": {
     "find-skills": "off",
     "anthropic-skills:docx": "name-only",
@@ -228,7 +231,8 @@
     "stripe@claude-plugins-official": false,
     "cloudflare@cloudflare": false,
     "1password@1password": false,
-    "homeclaw@homeclaw": false
+    "homeclaw@homeclaw": false,
+    "agent-models@dev-setup": true
   },
   "extraKnownMarketplaces": {
     "openai-codex": {
@@ -278,6 +282,12 @@
         "source": "github",
         "repo": "omarshahine/HomeClaw"
       }
+    },
+    "dev-setup": {
+      "source": {
+        "source": "directory",
+        "path": "__HOME__/Repos/personal/dev-setup"
+      }
     }
   },
   "feedbackDrafts": "off",
@@ -306,8 +316,5 @@
       "mcp__plugin_cloudflare_cloudflare__execute"
     ]
   },
-  "voiceEnabled": true,
-  "disabledMcpjsonServers": [
-    "kiwi"
-  ]
+  "voiceEnabled": true
 }

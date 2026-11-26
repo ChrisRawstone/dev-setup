@@ -369,9 +369,9 @@ if [[ "$INSTALL_EXTRAS" == true ]]; then
     have_markets="$(claude plugin marketplace list 2>/dev/null)"
     have_plugins="$(claude plugin list 2>/dev/null)"
     python3 -c "
-import json, sys
+import json, os, sys
 s = json.load(open(sys.argv[1]))
-markets = [m['source']['repo'] for m in s.get('extraKnownMarketplaces', {}).values()]
+markets = [m['source'].get('repo') or m['source']['path'].replace('__HOME__', os.path.expanduser('~')) for m in s.get('extraKnownMarketplaces', {}).values()]  # github repo, or a local folder (dev-setup's own mods)
 if any(p.endswith('@claude-plugins-official') for p in s.get('enabledPlugins', {})):
     markets.insert(0, 'anthropics/claude-plugins-official')
 for m in dict.fromkeys(markets): print('marketplace', m)

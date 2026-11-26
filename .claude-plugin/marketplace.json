@@ -1,0 +1,12 @@
+{
+  "name": "dev-setup",
+  "owner": { "name": "ChrisRawstone" },
+  "description": "Mods for this Mac's Claude Code, kept with the rest of dev-setup.",
+  "plugins": [
+    {
+      "name": "agent-models",
+      "source": "./claude/mods/agent-models",
+      "description": "Each subagent's model in the agent list; the viewed agent and running Codex jobs above the prompt"
+    }
+  ]
+}

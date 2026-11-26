@@ -125,6 +125,7 @@ migration (full wipe), but works for any fresh Mac.
 | `herdr/config.toml` | `~/.config/herdr/config.toml` |
 | `herdr-app/keys.json`, `herdr-app/mods/popup-*` (the old prefix keys and popups) | `~/.config/herdr-app/` (after `ctrl-alt-shift-escape`, rerun `./init_script.sh` to relink keys.json; restart Herdr after editing a mod here) |
 | `statusline.sh`, `turn-timer.sh`, `hooks/` (from `claude/`), `agents/global/AGENTS.md` as `CLAUDE.md` | `~/.claude/` |
+| `claude/mods/agent-models` (Claude Code plugin from this repo's own marketplace, `.claude-plugin/marketplace.json`, read in place) | installed by `--extras`; shows each subagent's model, the viewed agent and running Codex jobs |
 | `codex/herdr-agent-state.sh`, `rules/default.rules` | `~/.codex/` |
 | `cursor/herdr-agent-state.sh` | `~/.cursor/` |
 | `ccstatusline/settings.json`, `cxstatusline/render.sh` (Codex footer, drawn by `claude/statusline.sh`) | `~/.config/ccstatusline/`, `~/.config/cxstatusline/` |
