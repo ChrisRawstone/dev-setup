@@ -50,7 +50,8 @@
           {
             "type": "command",
             "command": "__HOME__/.claude/hooks/hc-session-record.py",
-            "timeout": 5
+            "timeout": 5,
+            "async": true
           }
         ]
       }
