@@ -63,7 +63,8 @@ clone_repo() {
   local dest="$1" url="$2" slug="$3" override="$4"
   [[ -d "$dest/.git" ]] && return 0
   if [[ -n "$override" ]]; then
-    extra "clone $slug" "git clone $override $dest" git clone "$override" "$dest"; return
+    # An explicit URL is cloned as given: the gitconfig's insteadOf would turn https into SSH.
+    extra "clone $slug" "git clone $override $dest" env GIT_CONFIG_GLOBAL=/dev/null git clone "$override" "$dest"; return
   fi
   echo "  clone $slug"
   if GIT_SSH_COMMAND="ssh -o BatchMode=yes -o ConnectTimeout=10" git clone -q "$url" "$dest" >"$STEP_LOG" 2>&1; then
@@ -371,12 +372,13 @@ if [[ "$INSTALL_EXTRAS" == true ]]; then
     python3 -c "
 import json, os, sys
 s = json.load(open(sys.argv[1]))
-markets = [m['source'].get('repo') or m['source']['path'].replace('__HOME__', os.path.expanduser('~')) for m in s.get('extraKnownMarketplaces', {}).values()]  # github repo, or a local folder (dev-setup's own mods)
+# a github repo, or this repo's own marketplace (its mods), from wherever it is checked out
+markets = [m['source'].get('repo') or sys.argv[2] for m in s.get('extraKnownMarketplaces', {}).values()]
 if any(p.endswith('@claude-plugins-official') for p in s.get('enabledPlugins', {})):
     markets.insert(0, 'anthropics/claude-plugins-official')
 for m in dict.fromkeys(markets): print('marketplace', m)
 for p, on in s.get('enabledPlugins', {}).items():
-    if on: print('plugin', p)" "$DOTFILES_DIR/claude/settings.json" | while read -r kind name; do
+    if on: print('plugin', p)" "$DOTFILES_DIR/claude/settings.json" "$DOTFILES_DIR" | while read -r kind name; do
       if [[ "$kind" == marketplace && "$have_markets" == *"$name"* ]]; then
         skipped "Claude marketplace $name"
       elif [[ "$kind" == plugin && "$have_plugins" == *"$name"* ]]; then

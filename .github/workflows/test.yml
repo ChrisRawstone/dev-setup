@@ -117,7 +117,7 @@ jobs:
           for p in $(python3 -c "import json;print(' '.join(k for k,v in json.load(open('claude/settings.json'))['enabledPlugins'].items() if v))"); do
             check "claude plugin $p" "claude plugin list | grep -q '${p%@*}'"
           done
-          check "codex wrapper (cxstatusline)" "grep -q turn-renderer ~/.local/bin/codex && ~/.local/bin/codex --version"
+          check "codex wrapper (cxstatusline)" "grep -q 'cxstatusline.* render' ~/.local/bin/codex && ~/.local/bin/codex --version"
           if ! grep -qs turn-renderer ~/.local/bin/codex; then
             echo "--- debug: ~/.local/bin"; ls -la ~/.local/bin 2>&1
             echo "--- debug: wrapper"; head -12 ~/.local/bin/codex 2>&1
