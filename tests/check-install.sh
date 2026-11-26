@@ -34,7 +34,7 @@ links=$(grep -c '^Linking' "$LOGS/run1.log")
 renders=$(grep -c '^Rendering' "$LOGS/run1.log")
 broken=$(grep '^Linking' "$LOGS/run1.log" | sed 's/.* -> //' | while read -r d; do [[ -e "$d" ]] || echo "$d"; done)
 [[ -z "$broken" ]] && pass "$links symlinks created, none broken" || fail "broken links: $broken"
-[[ $renders -eq 5 ]] && pass "5 files rendered" || fail "rendered $renders files (expected 5)"
+[[ $renders -eq 6 ]] && pass "6 files rendered" || fail "rendered $renders files (expected 6)"
 
 for f in ~/.ssh/config ~/.claude/settings.json ~/.codex/hooks.json ~/.cursor/hooks.json ~/.codex/config.toml; do
   grep -q '__HOME__' "$f" && fail "unrendered __HOME__ in $f"
@@ -44,11 +44,11 @@ grep -q "$HOME/.claude/turn-timer.sh" ~/.claude/settings.json && pass "rendered 
 python3 -c "import json,os;[json.load(open(os.path.expanduser(f))) for f in ['~/.claude/settings.json','~/.codex/hooks.json','~/.cursor/hooks.json']]" \
   && pass "rendered JSON valid" || fail "rendered JSON invalid"
 
-# Git identity: personal-account repos use the noreply address, others ~/.gitconfig.local
+# Git identity: personal-account repos commit as ChrisRawstone's outlook address, others take ~/.gitconfig.local
 printf '[user]\n\temail = work@example.com\n' > ~/.gitconfig.local
 gt=$(mktemp -d); git -C "$gt" init -q
 git -C "$gt" remote add origin git@github-chrisrawstone:ChrisRawstone/example.git
-[[ "$(git -C "$gt" config user.email)" == *users.noreply.github.com ]] && pass "personal repos commit with noreply email" || fail "personal repo email: $(git -C "$gt" config user.email)"
+[[ "$(git -C "$gt" config user.email)" == christian.raasteen@outlook.com ]] && pass "personal repos commit with the personal email" || fail "personal repo email: $(git -C "$gt" config user.email)"
 git -C "$gt" remote set-url origin git@ssh.dev.azure.com:v3/org/project/repo
 [[ "$(git -C "$gt" config user.email)" == work@example.com ]] && pass "other repos use ~/.gitconfig.local email" || fail "work repo email: $(git -C "$gt" config user.email)"
 
