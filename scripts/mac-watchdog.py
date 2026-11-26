@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""Notify-only health watchdog for this Mac. Never kills anything.
+"""Health watchdog for this Mac. Notifies only; the one exception is a stuck Spotify, which it restarts.
 
 Run every 15 min by launchd (launchd/com.rawstone.mac-watchdog.plist). Posts a macOS
 notification (and logs it) when:
   - one process uses more than 8 GB of memory (incl. compressed/swapped; e.g. Herdr's GPU leak)
   - one process stays above 90% CPU for 3 runs in a row (e.g. a stuck BTLEServer);
-    security agents the user can't touch are left out
+    security agents the user can't touch are left out. Spotify's renderer (a known hang) is restarted
+    after 2 runs instead, resuming playback if it was playing
   - uptime is over 7 days and swap use is over 8 GB (restart nudge)
   - once a day: Wi-Fi/Bluetooth woke the Mac more than 10 times per hour asleep in the last 24 h
 The same alert repeats at most every 6 h. State lives in ~/.local/state/mac-watchdog.json.
@@ -52,7 +53,11 @@ def checks(state):
         name = os.path.basename(comm)
         if float(cpu) >= CPU_PCT and not IGNORE.search(comm):
             now_hot[pid] = streaks.get(pid, 0) + 1
-            if now_hot[pid] >= CPU_RUNS:
+            if name == "Spotify Helper (Renderer)" and now_hot[pid] >= 2:
+                if not DRY:
+                    restart_spotify()
+                alerts.append(("spotify", f"Spotify was stuck at {cpu}% CPU", "Restarted it automatically."))
+            elif now_hot[pid] >= CPU_RUNS:
                 hint = "Bluetooth stuck: run `sudo killall BTLEServer`." if name.startswith("BTLE") or name == "bluetoothd" \
                     else "Quit or restart it if you're not using it."
                 alerts.append((f"cpu:{name}", f"{name} at {cpu}% CPU for {now_hot[pid] * 15}+ min", hint))
@@ -85,6 +90,27 @@ def checks(state):
             alerts.append(("wakes", f"Wi-Fi/Bluetooth woke the Mac {wakes / hours:.0f}×/h asleep",
                            "Battery drain. Restart Bluetooth (`sudo killall BTLEServer`) or the Mac."))
     return alerts
+
+
+def restart_spotify():
+    tell = lambda cmd: subprocess.run(["osascript", "-e", f'tell application "Spotify" to {cmd}'],
+                                      capture_output=True, text=True, timeout=20).stdout.strip()
+    try:
+        playing = tell("player state as string") == "playing"
+        tell("quit")
+    except subprocess.TimeoutExpired:
+        playing = False
+    for _ in range(15):
+        if subprocess.run(["pgrep", "-x", "Spotify"], capture_output=True).returncode:
+            break
+        time.sleep(1)
+    else:
+        subprocess.run(["pkill", "-9", "-x", "Spotify"])
+        time.sleep(2)
+    subprocess.run(["open", "-g", "-a", "Spotify"])
+    if playing:
+        time.sleep(8)
+        tell("play")
 
 
 def notify(title, body):
