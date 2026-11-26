@@ -165,17 +165,13 @@ CACHE_FILE="${HOME}/.claude/cache/statusline-rate-limits${STATUSLINE_AGENT:+-$ST
 STALE=0
 
 if [ "$R5_PCT" != "-1" ] || [ "$R7_PCT" != "-1" ]; then
-  # Rewrite only on change: a run killed between printf and mv leaves its temp file behind.
+  # Rewritten in place, only on change: Claude kills runs mid-way when a newer one starts,
+  # so a temp file + mv leaked temp files; a torn write only costs one cold-start fallback.
   NEW_ROW="${R5_PCT}"$'\037'"${R5_RESET}"$'\037'"${R7_PCT}"$'\037'"${R7_RESET}"
   OLD_ROW=""; [ -r "$CACHE_FILE" ] && read -r OLD_ROW < "$CACHE_FILE"
   if [ "$NEW_ROW" != "$OLD_ROW" ]; then
     [ -d "${CACHE_FILE%/*}" ] || mkdir -p "${CACHE_FILE%/*}" 2>/dev/null
-    TMP="${CACHE_FILE}.$$"
-    if printf '%s\n' "$NEW_ROW" > "$TMP" 2>/dev/null; then
-      mv -f "$TMP" "$CACHE_FILE" 2>/dev/null || rm -f "$TMP" 2>/dev/null
-    else
-      rm -f "$TMP" 2>/dev/null
-    fi
+    printf '%s\n' "$NEW_ROW" > "$CACHE_FILE" 2>/dev/null
   fi
 elif [ -r "$CACHE_FILE" ]; then
   IFS=$'\037' read -r C5_PCT C5_RESET C7_PCT C7_RESET < "$CACHE_FILE"
@@ -190,32 +186,42 @@ fi
 STALE_MARK=""
 [ "$STALE" = 1 ] && STALE_MARK="${C_DIM}~${RESET}"
 
-# ---- Fable weekly window ----------------------------------------------------
-# Not in the statusLine payload, so read it from the usage endpoint /usage uses,
-# in the background at most every 2 min; this render shows the last fetched value.
-# The file is "<pct> <resets_at> <fetched_at>"; rewriting fetched_at before the
-# fetch keeps parallel sessions from all fetching at once.
-FB_PCT=-1
+# ---- Fable and Astra (Codex) weekly windows ---------------------------------
+# Neither is in the statusLine payload. A background job fetches both at most every
+# 2 min; this render shows the last fetched values.
+# - Fable: Claude's usage endpoint (what /usage uses), its "Fable" weekly_scoped row.
+# - Astra: ChatGPT's Codex usage endpoint, with Codex's own login. Astra has no window of
+#   its own: it draws on Codex's 7-day window, so that is shown, red "✗" if Astra is off.
+# statusline-fable holds "<pct> <resets_at> <fetched_at>"; rewriting fetched_at before
+# the fetch keeps parallel sessions from all fetching at once.
+FB_PCT=-1 AS_PCT=-1
 if [ -z "$STATUSLINE_AGENT" ]; then
-  FABLE_FILE="${HOME}/.claude/cache/statusline-fable"
-  F_PCT="" F_RESET=0 F_AT=0
+  FABLE_FILE="${HOME}/.claude/cache/statusline-fable" ASTRA_FILE="${HOME}/.claude/cache/statusline-astra"
+  F_PCT="" F_RESET=0 F_AT=0 A_PCT="" A_RESET=0 A_OK=true
   [ -r "$FABLE_FILE" ] && IFS=$'\037' read -r F_PCT F_RESET F_AT < "$FABLE_FILE"
+  [ -r "$ASTRA_FILE" ] && IFS=$'\037' read -r A_PCT A_RESET A_OK < "$ASTRA_FILE"
   if (( NOW - ${F_AT:-0} > 120 )); then
     [ -d "${FABLE_FILE%/*}" ] || mkdir -p "${FABLE_FILE%/*}" 2>/dev/null
     printf '%s\037%s\037%s\n' "$F_PCT" "${F_RESET:-0}" "$NOW" > "$FABLE_FILE"
     (
+      put() { [ -s "$1.$$" ] && mv -f "$1.$$" "$1"; rm -f "$1.$$"; }
       TOKEN="$(security find-generic-password -s 'Claude Code-credentials' -w 2>/dev/null | jq -r '.claudeAiOauth.accessToken // empty')"
-      [ -n "$TOKEN" ] || exit 0
-      curl -sf -m 10 https://api.anthropic.com/api/oauth/usage \
+      [ -n "$TOKEN" ] && curl -sf -m 10 https://api.anthropic.com/api/oauth/usage \
           -H "Authorization: Bearer ${TOKEN}" -H 'anthropic-beta: oauth-2025-04-20' \
         | jq -r --arg at "$NOW" 'first(.limits[]? | select(.kind == "weekly_scoped" and .scope.model.display_name == "Fable"))
-                 | "\(.percent)\u001f\(.resets_at[0:19] + "Z" | fromdateiso8601)\u001f\($at)"' > "${FABLE_FILE}.$$" \
-        && [ -s "${FABLE_FILE}.$$" ] && mv -f "${FABLE_FILE}.$$" "$FABLE_FILE"
-      rm -f "${FABLE_FILE}.$$"
+                 | "\(.percent)\u001f\(.resets_at[0:19] + "Z" | fromdateiso8601)\u001f\($at)"' > "${FABLE_FILE}.$$"
+      put "$FABLE_FILE"
+      CX="$(jq -r '[.tokens.access_token // "", .tokens.account_id // ""] | join(" ")' "${HOME}/.codex/auth.json" 2>/dev/null)"
+      [ -n "${CX% *}" ] && curl -sf -m 10 https://chatgpt.com/backend-api/wham/usage \
+          -H "Authorization: Bearer ${CX% *}" -H "ChatGPT-Account-Id: ${CX#* }" -H 'User-Agent: codex-cli' \
+        | jq -r '(.model_usage["gpt-6-astra"].available // true) as $ok | .rate_limit.primary_window // empty
+                 | "\(.used_percent)\u001f\(.reset_at)\u001f\($ok)"' > "${ASTRA_FILE}.$$"
+      put "$ASTRA_FILE"
     ) </dev/null >/dev/null 2>&1 &
   fi
   # A window whose reset has passed rolled over; its old percentage means nothing.
   [ -n "$F_PCT" ] && (( ${F_RESET%.*} > NOW )) && FB_PCT="$F_PCT" FB_RESET="$F_RESET"
+  [ -n "$A_PCT" ] && (( ${A_RESET%.*} > NOW )) && AS_PCT="$A_PCT" AS_RESET="$A_RESET"
 fi
 
 # ---- line 2: usage windows + cost / duration / lines changed --------------
@@ -239,6 +245,12 @@ fi
 if [ "$FB_PCT" != "-1" ]; then
   pct_color "${FB_PCT%.*}"; fmt_eta "${FB_RESET%.*}"
   L2_PARTS+=("${C_DIM}fable${RESET} ${COLOR}${FB_PCT%.*}%${RESET} ${C_DIM}↺${C_TEXT}${ETA}${RESET}")
+fi
+
+if [ "$AS_PCT" != "-1" ]; then
+  pct_color "${AS_PCT%.*}"; fmt_eta "${AS_RESET%.*}"
+  OFF=""; [ "$A_OK" = false ] && COLOR="$C_CRIT" OFF=" ✗"
+  L2_PARTS+=("${C_DIM}astra${RESET} ${COLOR}${AS_PCT%.*}%${OFF}${RESET} ${C_DIM}↺${C_TEXT}${ETA}${RESET}")
 fi
 
 [ -z "$STATUSLINE_AGENT" ] && L2_PARTS+=("${C_COST}\$${COST_FMT}${RESET}")
