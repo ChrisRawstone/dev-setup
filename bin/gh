@@ -1,0 +1,13 @@
+#!/bin/bash
+# gh as the GitHub account the folder belongs to: ~/Repos/work -> ChristianRaasteen-halfspace,
+# ~/Repos/personal and ~/scratch -> ChrisRawstone. Elsewhere, or with GH_TOKEN set, plain gh.
+real=/opt/homebrew/bin/gh
+if [ "${1:-}" != auth ] && [ -z "${GH_TOKEN:-}${GITHUB_TOKEN:-}" ]; then  # gh auth refuses to run with GH_TOKEN set
+  case "$PWD/" in
+    "$HOME/Repos/work/"*) user=ChristianRaasteen-halfspace ;;
+    "$HOME/Repos/personal/"* | "$HOME/scratch/"*) user=ChrisRawstone ;;
+    *) user= ;;
+  esac
+  if [ -n "$user" ] && token=$("$real" auth token --user "$user" 2>/dev/null); then export GH_TOKEN=$token; fi
+fi
+exec "$real" "$@"

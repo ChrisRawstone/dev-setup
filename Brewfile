@@ -24,6 +24,8 @@ brew "gitleaks"
 brew "go"
 # Agent multiplexer that lives in your terminal
 brew "herdr"
+# Herdr desktop app (installs herdr-core `hc` on first start; updates itself)
+cask "herdr-app"
 # Handy way to save and run project-specific commands
 brew "just"
 # Hash utilities
@@ -81,3 +83,5 @@ brew "node"
 uv "prek"
 npm "corepack"
 npm "cxstatusline"
+# ms365-personal MCP server (~/Repos/personal/.mcp.json), installed so it starts without npx
+npm "@softeria/ms-365-mcp-server"

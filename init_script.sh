@@ -241,14 +241,31 @@ link_config "herdr/new-worktree.sh" "$HOME/.config/herdr/new-worktree.sh"
 link_config "herdr/dev-stack" "$HOME/.config/herdr/dev-stack"
 link_config "herdr/dev-stack-fmt" "$HOME/.config/herdr/dev-stack-fmt"
 link_config "herdr/dev-browser" "$HOME/.config/herdr/dev-browser"
+link_config "herdr/refresh-client" "$HOME/.config/herdr/refresh-client"
 link_config "herdr/plugins/dev-servers/dev-servers" "$HOME/.config/herdr/dev-servers"
 link_config "herdr/worktrees" "$HOME/.config/herdr/worktrees"
+link_config "herdr/open-paths" "$HOME/.config/herdr/open-paths"
+link_config "herdr/fit-stack" "$HOME/.config/herdr/fit-stack"
+# herdr-app: keys and popup mods linked; settings.json rendered once, since the app rewrites it
+link_config "herdr-app/keys.json" "$HOME/.config/herdr-app/keys.json"
+render_config "herdr-app/settings.json" "$HOME/.config/herdr-app/settings.json" --if-missing
+# Hide herdr-app's bottom status bar (kept with the layout's clicks; needs the app running)
+if command -v herdr-app >/dev/null && herdr-app status >/dev/null 2>&1; then herdr-app do layout.hide --id status >/dev/null
+else todo "Open Herdr, then run: herdr-app do layout.hide --id status   (hides its bottom bar)"; fi
+for m in "$DOTFILES_DIR"/herdr-app/mods/*/; do m=${m%/}; link_config "herdr-app/mods/${m##*/}" "$HOME/.config/herdr-app/mods/${m##*/}"; done
 
 # Claude Code
-link_config "claude/CLAUDE.md" "$HOME/.claude/CLAUDE.md"
+link_config "agents/global/AGENTS.md" "$HOME/.claude/CLAUDE.md"
+link_config "agents/global/AGENTS.md" "$HOME/.codex/AGENTS.md"
+link_config "agents/personal/AGENTS.md" "$HOME/Repos/personal/AGENTS.md"
+link_config "agents/work/AGENTS.md" "$HOME/Repos/work/AGENTS.md"
+link_config "agents/personal/AGENTS.md" "$HOME/scratch/AGENTS.md"
+touch "$HOME/Repos/personal/.codex-root" "$HOME/Repos/work/.codex-root"  # Codex reads AGENTS.md from here down
 link_config "claude/statusline.sh" "$HOME/.claude/statusline.sh"
 link_config "claude/turn-timer.sh" "$HOME/.claude/turn-timer.sh"
 link_config "claude/hooks/herdr-agent-state.sh" "$HOME/.claude/hooks/herdr-agent-state.sh"
+link_config "claude/hooks/allow-personal-deploys.py" "$HOME/.claude/hooks/allow-personal-deploys.py"
+link_config "claude/hooks/blocked-fetch-hint.py" "$HOME/.claude/hooks/blocked-fetch-hint.py"
 render_config "claude/settings.json" "$HOME/.claude/settings.json"
 
 # Codex
@@ -270,6 +287,11 @@ link_config "bin/cxstatusline" "$HOME/.local/bin/cxstatusline"
 # Git and SSH (host aliases only; keys never live in this repo)
 link_config "git/gitconfig" "$HOME/.gitconfig"
 link_config "git/gitconfig-personal" "$HOME/.gitconfig.personal"
+link_config "git/gitconfig-work" "$HOME/.gitconfig.work"
+link_config "bin/gh" "$HOME/.local/bin/gh"  # gh picks the GitHub account by folder
+# terminal-browser shim: `action` works with a long home path and in herdr-app panes
+link_config "bin/terminal-browser" "$HOME/.local/bin/terminal-browser"
+link_config "bin/terminal-browser-agent" "$HOME/.local/bin/terminal-browser-agent"
 if ! git config --file ~/.gitconfig.local user.email &>/dev/null; then
   todo "Set your work git email: git config --file ~/.gitconfig.local user.email you@company.com"
 fi
@@ -288,6 +310,10 @@ done
 # Own skills (third-party ones are installed by --extras)
 link_config "skills/web-preview" "$HOME/.agents/skills/web-preview"
 link_config "skills/web-preview" "$HOME/.claude/skills/web-preview"
+link_config "skills/pre-pr" "$HOME/.claude/skills/pre-pr"
+link_config "skills/pr" "$HOME/.claude/skills/pr"
+link_config "skills/blocked-fetch" "$HOME/.claude/skills/blocked-fetch"
+link_config "skills/blocked-fetch" "$HOME/.agents/skills/blocked-fetch"
 link_config "skills/notes" "$HOME/.claude/skills/notes"
 link_config "skills/notes" "$HOME/.agents/skills/notes"
 link_config "codex/skills/claude-skill" "$HOME/.codex/skills/claude-skill"
@@ -386,6 +412,9 @@ for p, on in s.get('enabledPlugins', {}).items():
     if herdr plugin list 2>/dev/null | grep -q dev-servers; then skipped "herdr Dev servers plugin"
     else extra "herdr Dev servers plugin" "herdr plugin link herdr/plugins/dev-servers" \
       herdr plugin link "$DOTFILES_DIR/herdr/plugins/dev-servers"; fi
+    if herdr plugin list 2>/dev/null | grep -q keep-awake; then skipped "herdr Keep awake plugin"
+    else extra "herdr Keep awake plugin" "herdr plugin link herdr/plugins/keep-awake" \
+      herdr plugin link "$DOTFILES_DIR/herdr/plugins/keep-awake"; fi
   fi
 
   # Xcode from the App Store isn't the active developer dir until selected (admin prompt)
@@ -403,12 +432,12 @@ for p, on in s.get('enabledPlugins', {}).items():
   if [[ -d /Applications/Macchiato.app || -d ~/Applications/Macchiato.app ]]; then
     skipped "Macchiato"
   elif xcodebuild -version &>/dev/null; then
-    src="$HOME/Repos/Macchiato"
+    src="$HOME/Repos/personal/Macchiato"
     if clone_repo "$src" git@github-chrisrawstone:ChrisRawstone/Macchiato.git ChrisRawstone/Macchiato "${MACCHIATO_REPO:-}"; then
-      extra "build Macchiato" "Open ~/Repos/Macchiato/Macchiato.xcodeproj in Xcode and build (Xcode may need to finish installing components)" \
+      extra "build Macchiato" "Open ~/Repos/personal/Macchiato/Macchiato.xcodeproj in Xcode and build (Xcode may need to finish installing components)" \
         xcodebuild -project "$src/Macchiato.xcodeproj" -scheme Macchiato -configuration Release \
         -destination 'platform=macOS,arch=arm64' SYMROOT="$src/build" build \
-      && extra "install Macchiato" "ditto ~/Repos/Macchiato/build/Release/Macchiato.app $app_dir/Macchiato.app" \
+      && extra "install Macchiato" "ditto ~/Repos/personal/Macchiato/build/Release/Macchiato.app $app_dir/Macchiato.app" \
         ditto "$src/build/Release/Macchiato.app" "$app_dir/Macchiato.app"
     fi
   else
@@ -425,9 +454,9 @@ for p, on in s.get('enabledPlugins', {}).items():
   if [[ ${#ac_targets[@]} -gt 0 && -n "${SKIP_AGENTSCOMPARE:-}" ]]; then
     skipped "AgentsCompare (SKIP_AGENTSCOMPARE set)"
   elif [[ ${#ac_targets[@]} -gt 0 ]]; then
-    ac="$HOME/Repos/AgentsCompare"
+    ac="$HOME/Repos/personal/AgentsCompare"
     if clone_repo "$ac" git@github-chrisrawstone:ChrisRawstone/AgentsCompare.git ChrisRawstone/AgentsCompare "${AGENTSCOMPARE_REPO:-}" \
-       && extra "build AgentsCompare" "cd ~/Repos/AgentsCompare && npm ci && npm run package" \
+       && extra "build AgentsCompare" "cd ~/Repos/personal/AgentsCompare && npm ci && npm run package" \
             bash -c "cd '$ac' && npm ci --no-audit --no-fund && npm run package"; then
       vsix=$(ls -t "$ac"/agentscompare-*.vsix 2>/dev/null | head -1)
       for cli in "${ac_targets[@]}"; do

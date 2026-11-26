@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+# Files in a popup (prefix+shift+o): every existing file path in the focused pane's recent output, newest
+# first, opened in Cursor on Enter (Tab marks several). Catches the absolute, ~ and relative paths (with or
+# without :line) that agents print, which Herdr's Ctrl-click doesn't treat as links.
+#   open-paths            the popup
+#   open-paths --rows     its rows, for a check
+set -euo pipefail
+PATH="/opt/homebrew/bin:$HOME/.local/bin:$PATH"
+
+fail() { printf '\n%s\nPress any key to close.' "$1" >&2; read -rsn1 || true; exit 1; }
+
+rows() {
+  local pane cwd
+  # herdr-app (mods/popup-open-paths): the terminal focused when the popup opened.
+  if [[ -n ${HC_TERMINAL_ID:-} ]]; then
+    [[ -n ${HERDR_FOCUSED_TERMINAL:-} ]] || return 0
+    cwd=$(hc get "$HERDR_FOCUSED_TERMINAL" --json | jq -r '.foreground.cwd // .cwd')
+    read_pane() { hc read "$HERDR_FOCUSED_TERMINAL" --lines 3000; }
+  else
+    pane=$(herdr pane list | jq -r '.result.panes[] | select(.focused) | .pane_id' | head -1)
+    [[ -n $pane ]] || return 0
+    cwd=$(herdr pane list | jq -r --arg p "$pane" '.result.panes[] | select(.pane_id == $p) | .foreground_cwd // .cwd')
+    # recent-unwrapped joins lines the terminal wrapped, so long paths come out whole.
+    read_pane() { herdr pane read "$pane" --source recent-unwrapped --lines 3000; }
+  fi
+  read_pane |
+    grep -oE '(~|\.{0,2}/|[A-Za-z0-9_.@-]+/)[^][[:space:]"'"'"'`<>(){}|,;]+' |
+    tail -r |
+    while IFS= read -r p; do
+      p=${p%%[.:]}; line=""
+      [[ $p =~ ^(.*):([0-9]+)(:[0-9]+)?$ ]] && { p=${BASH_REMATCH[1]}; line=${BASH_REMATCH[2]}; }
+      [[ $p == "~"* ]] && p="$HOME${p:1}"
+      [[ $p == /* ]] || p="$cwd/$p"
+      [[ -f $p ]] && printf '%s%s\n' "$p" "${line:+:$line}"
+    done | awk '!seen[$0]++'
+}
+
+[[ ${1:-} == --rows ]] && { rows; exit; }
+
+picked=$(rows | sed "s|^$HOME|~|" |
+  fzf --multi --no-sort --prompt 'open in Cursor> ' --header 'Enter opens, Tab marks several, Esc closes' \
+    --preview 'f={}; f=${f/#\~/$HOME}; f=${f%:*[0-9]}; [[ -f $f ]] || f={}; f=${f/#\~/$HOME}; head -100 "$f" 2>/dev/null | file -b - | grep -q text && head -100 "$f" || file -b "$f"' \
+    --preview-window 'right,50%') || exit 0
+[[ -n $picked ]] || exit 0
+while IFS= read -r p; do cursor -g "${p/#\~/$HOME}" || fail "Cursor couldn't open $p"; done <<<"$picked"

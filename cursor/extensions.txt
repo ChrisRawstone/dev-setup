@@ -10,7 +10,6 @@ firefox-devtools.vscode-firefox-debug
 fooxly.workspace
 hashicorp.terraform
 james-yu.latex-workshop
-mechatroner.rainbow-csv
 ms-azuretools.vscode-containers
 ms-playwright.playwright
 ms-python.debugpy
@@ -22,7 +21,6 @@ ms-toolsai.jupyter-renderers
 ms-toolsai.vscode-jupyter-cell-tags
 ms-toolsai.vscode-jupyter-slideshow
 pkief.material-icon-theme
-qufiwefefwoyn.inline-sql-syntax
 repreng.csv
 svelte.svelte-vscode
 tamasfe.even-better-toml

@@ -1,3 +1,6 @@
+# Codex reads AGENTS.md from the folder holding .codex-root (~/Repos/work, ~/Repos/personal) down, not only from the git root
+project_root_markers = [".codex-root"]
+
 # Base Codex config. Installed only when ~/.codex/config.toml doesn't exist yet;
 # the ChatGPT/Codex app adds its own plugins, MCP servers and project trust entries.
 approval_policy = "on-request"
@@ -18,3 +21,7 @@ conversationDetailMode = "STEPS_PROSE"
 ambient-suggestions-enabled = true
 external-agent-import-sync-enabled = false
 followUpQueueMode = "queue"
+
+# cxstatusline draws the footer; the stock one would flash first at startup
+[tui]
+status_line = []

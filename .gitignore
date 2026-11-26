@@ -1,3 +1,6 @@
 .DS_Store
 *.bak
 *.bak-*
+# written by herdr-app into every mod folder on each run
+herdr-app/mods/*/gpui-kit.d.ts
+herdr-app/mods/*/jsconfig.json

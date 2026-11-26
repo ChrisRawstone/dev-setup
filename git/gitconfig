@@ -5,8 +5,19 @@
 	autoSetupRemote = true
 [include]
 	path = ~/.gitconfig.local
-# Repos on the personal GitHub account commit with its private noreply address
+# Repos on the personal GitHub account commit as ChrisRawstone, wherever they are
 [includeIf "hasconfig:remote.*.url:git@github-chrisrawstone:*/**"]
 	path = ~/.gitconfig.personal
 [includeIf "hasconfig:remote.*.url:https://github.com/ChrisRawstone/**"]
 	path = ~/.gitconfig.personal
+# The folder decides: ~/Repos/personal is personal, ~/Repos/work is work
+[includeIf "gitdir:~/Repos/personal/"]
+	path = ~/.gitconfig.personal
+[includeIf "gitdir:~/Repos/work/"]
+	path = ~/.gitconfig.work
+[credential "https://github.com"]
+	helper = 
+	helper = !/opt/homebrew/bin/gh auth git-credential
+[credential "https://gist.github.com"]
+	helper = 
+	helper = !/opt/homebrew/bin/gh auth git-credential

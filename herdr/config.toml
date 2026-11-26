@@ -27,11 +27,25 @@ command = "~/.config/herdr/new-worktree.sh --stack"
 width = "70%"
 height = "60%"
 
+# File paths in the focused pane's output (images, code, logs): pick one or several, open in Cursor
+[[keys.command]]
+key = "prefix+shift+o"
+type = "popup"
+command = "~/.config/herdr/open-paths"
+width = "90%"
+height = "70%"
+
 # Open or close the reviewr diff pane beside the current pane
 [[keys.command]]
 key = "prefix+d"
 type = "plugin_action"
 command = "persiyanov.reviewr.toggle"
+
+# Clear terminal-browser lag: fresh client, browsers reopen on their pages (needs the zsh `herdr` function)
+[[keys.command]]
+key = "prefix+shift+l"
+type = "shell"
+command = "~/.config/herdr/refresh-client"
 
 # Dev servers per worktree; the Dev servers plugin (herdr/plugins/dev-servers) stops closed ones
 [[keys.command]]

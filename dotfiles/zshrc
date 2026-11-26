@@ -189,6 +189,9 @@ fi
 
 export COLORTERM=truecolor
 export CLICOLOR=1
+# Herdr passes OSC 8 links through, but tools don't recognise TERM_PROGRAM=herdr; this makes
+# Claude Code show link titles you can cmd-click instead of full URLs.
+[[ $TERM_PROGRAM == herdr ]] && export FORCE_HYPERLINK=1
 
 # =============================================================================
 # Aliases
@@ -522,13 +525,21 @@ fi
 # Claude Code never persists trust for the home directory, so a bare `claude`
 # in ~ re-prompts every time. Redirect only an exact-$HOME cwd; any project
 # directory (including one under ~) runs in place.
+# Personal folders (~/scratch, ~/Repos/personal and below) skip all permission
+# prompts. Subcommands reject the flag, so they run without it.
 export CLAUDE_HOME_DIR="$HOME/scratch"
 claude() {
+  local dir="$PWD" flags=()
+  [[ "$dir" == "$HOME" ]] && dir="$CLAUDE_HOME_DIR"
+  case "$1" in
+    agents|attach|auth|auto-mode|doctor|fix|gateway|import|install|logs|mcp|plugin|plugins|purge|respawn|rm|sessions|setup-token|stop|kill|ultrareview|update|upgrade) ;;
+    *) [[ "$dir/" == "$HOME/scratch/"* || "$dir/" == "$HOME/Repos/personal/"* ]] && flags=(--dangerously-skip-permissions) ;;
+  esac
   if [[ "$PWD" == "$HOME" ]]; then
     mkdir -p "$CLAUDE_HOME_DIR"
-    (cd "$CLAUDE_HOME_DIR" && command claude "$@")
+    (cd "$CLAUDE_HOME_DIR" && command claude "${flags[@]}" "$@")
   else
-    command claude "$@"
+    command claude "${flags[@]}" "$@"
   fi
 }
 
@@ -571,9 +582,19 @@ autoload -Uz compinit
 (( ${+_comps[docker]} )) || compinit
 # End of Docker CLI completions
 
-# Clear terminal-browser lag in Herdr: detach first (ctrl+b q), then run `hf`.
-# Closes the browsers so the next `terminal-browser open` uses Herdr's current graphics path,
-# then reattaches with a fresh client. Panes keep running.
+# Clear terminal-browser lag in Herdr: Prefix+Shift+L (~/.config/herdr/refresh-client) closes the
+# browsers and ends this client; `herdr` below then reattaches at once and the browsers reopen.
+# By hand: detach (ctrl+b q), then `hf`. Panes keep running either way.
+herdr() {
+  (( $# )) && { command herdr "$@"; return; }
+  local marker=${XDG_STATE_HOME:-$HOME/.local/state}/herdr-refresh start
+  while :; do
+    start=$(date +%s)
+    command herdr
+    # Reattach only when refresh-client ended the client, not after a normal detach.
+    [[ -e $marker && $(stat -f %m "$marker") -ge $start ]] || break
+  done
+}
 herdr-fresh() {
   terminal-browser shutdown >/dev/null 2>&1
   herdr "$@"

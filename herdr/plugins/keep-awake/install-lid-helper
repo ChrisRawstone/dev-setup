@@ -1,0 +1,27 @@
+#!/bin/sh
+# Installs keep-awake-lid as a root LaunchDaemon (a root-owned copy, so the repo's copy can't run as root).
+# Run once: sudo ./install-lid-helper
+set -eu
+cd "$(dirname "$0")"
+label=com.craasteen.herdr-keep-awake-lid
+plist=/Library/LaunchDaemons/$label.plist
+install -d /usr/local/sbin
+install -o root -g wheel -m 755 keep-awake-lid /usr/local/sbin/herdr-keep-awake-lid
+cat >"$plist" <<PLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>Label</key><string>$label</string>
+  <key>ProgramArguments</key><array>
+    <string>/usr/local/sbin/herdr-keep-awake-lid</string>
+    <string>/Users/christian.raasteen/.local/state/herdr-keep-awake/lid</string>
+  </array>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+</dict></plist>
+PLIST
+chown root:wheel "$plist"; chmod 644 "$plist"
+launchctl bootout system "$plist" 2>/dev/null || true
+launchctl bootstrap system "$plist"
+rm -f /etc/sudoers.d/herdr-keep-awake
+echo "installed $label"

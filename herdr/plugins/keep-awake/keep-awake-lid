@@ -1,0 +1,12 @@
+#!/bin/sh
+# Root half of keep-awake, run by a LaunchDaemon (install-lid-helper): sudo goes through BeyondTrust's
+# "Confirm Execution" prompt, so the watcher can't run pmset itself. Every 10s it sets pmset disablesleep
+# to the watcher's flag file ("1" = keep awake with the lid closed); a missing flag, or one older than 2 min
+# because the watcher is gone, counts as 0.
+flag=$1
+while :; do
+  want=0
+  if [ -f "$flag" ] && [ $(( $(date +%s) - $(stat -f %m "$flag") )) -lt 120 ] && [ "$(head -c 1 "$flag")" = 1 ]; then want=1; fi
+  [ "$(pmset -g | awk '/SleepDisabled/{print $2}')" = "$want" ] || pmset -a disablesleep "$want"
+  sleep 10
+done

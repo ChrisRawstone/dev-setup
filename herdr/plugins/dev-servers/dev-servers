@@ -25,9 +25,14 @@ listeners() {
 # so a server starting up or an unreachable socket never looks like "everything closed".
 open_worktrees() {
   local panes
-  panes=$(herdr pane list) || return 1
-  [ "$(jq '.result.panes | length' <<<"$panes")" -gt 0 ] || return 1
-  jq -r '.result.panes[] | .cwd, .foreground_cwd // empty' <<<"$panes" | sed -nE "s#$WT_RE.*#\1#p" | sort -u
+  if [ -n "${HC_TERMINAL_ID:-}" ]; then  # herdr-app: every herdr-core terminal
+    panes=$(hc ls --json | jq -r '.terminals[].address' | while read -r t; do hc get "$t" --json; done |
+      jq -r '.cwd, .foreground.cwd // empty') || return 1
+  else
+    panes=$(herdr pane list | jq -r '.result.panes[] | .cwd, .foreground_cwd // empty') || return 1
+  fi
+  [ -n "$panes" ] || return 1
+  sed -nE "s#$WT_RE.*#\1#p" <<<"$panes" | sort -u
 }
 
 has_tty() { [ "$(ps -o tty= -p "$1" | tr -d ' ')" != "??" ]; }

@@ -1,0 +1,6 @@
+#!/bin/sh
+# agent-browser for terminal-browser (TERMINAL_BROWSER_AGENT, set by bin/terminal-browser) with a short socket
+# folder: terminal-browser's own is over macOS's 103-byte socket limit (zenbu-labs/terminal-browser#121).
+d="/tmp/tb-agent-$(id -u)"
+mkdir -p -m 700 "$d"
+AGENT_BROWSER_SOCKET_DIR="$d" exec "$TERMINAL_BROWSER_DIST_ROOT/agent-browser/bin/agent-browser" "$@"

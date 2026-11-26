@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
-# Open the web app in terminal-browser once it and its API answer, zoomed so the page lays out
-# like a 13-14" laptop: in the 40% column of new-worktree.sh --stack, 67% gives about 1330x834.
+# Open the web app in terminal-browser once it and its API answer. new-worktree.sh --stack sizes its
+# pane for a 16:10 page; in old Herdr the zoom-out (67% by default) makes it lay out like a laptop.
 # Usage: dev-browser <web url> [api url] [zoom-out steps, default 4: 90, 80, 75, 67%]
 set -euo pipefail
 url=$1 api=${2:-} steps=${3:-4}
 
 until curl -sf -o /dev/null "$url" && { [ -z "$api" ] || curl -s -o /dev/null "$api"; }; do sleep 1; done
+# herdr-app: hc keys can't send cmd+ chords, so no zoom there.
+[ -n "${HC_TERMINAL_ID:-}" ] && exec terminal-browser open "$url"
 
 # Chrome remembers zoom per host, so reset first; the keys go to this pane once the browser draws.
 (

@@ -9,6 +9,28 @@
             "type": "command"
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "'/opt/homebrew/lib/node_modules/cxstatusline/dist/cxstatusline.js' hook",
+            "timeout": 10,
+            "statusMessage": "cxstatusline: checking Codex version"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "__HOME__/.claude/hooks/blocked-fetch-hint.py",
+            "timeout": 5
+          }
+        ]
       }
     ]
   }

@@ -1,0 +1,17 @@
+# Keeps the Mac from idle-sleeping while any Herdr agent is working. Linked by init_script.sh.
+id = "craasteen.keep-awake"
+name = "Keep awake"
+version = "0.1.0"
+min_herdr_version = "0.9.3"
+description = "Blocks idle sleep while any Herdr agent is working"
+platforms = ["macos"]
+
+# Herdr has no supervised daemons, so startup launches a detached watcher that exits with the server.
+[[startup]]
+command = ["./keep-awake", "start"]
+
+[[actions]]
+id = "status"
+title = "Keep awake: is the watcher running?"
+contexts = ["global"]
+command = ["./keep-awake", "status"]

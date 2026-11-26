@@ -20,7 +20,17 @@ fail() { printf '\n%s\nPress any key to close.' "$1" >&2; read -rsn1 || true; ex
 main_checkout() { local c; c=$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null) && echo "${c%/.git}"; }
 
 # workspace<TAB>folder for each pane, once for its launch folder and once for its live one.
-panes() { herdr pane list | jq -r '.result.panes[] | .workspace_id as $w | (.cwd, .foreground_cwd // empty) | [$w, .] | @tsv'; }
+panes() {
+  if [ -n "${HC_TERMINAL_ID:-}" ]; then  # herdr-app: its terminals carry their space as a label
+    hc ls --json | jq -r '.terminals[].address' | while read -r t; do hc get "$t" --json; done |
+      jq -r 'select(.labels["herdr.space"]) | .labels["herdr.space"] as $w | (.cwd, .foreground.cwd // empty) | [$w, .] | @tsv'
+  else
+    herdr pane list | jq -r '.result.panes[] | .workspace_id as $w | (.cwd, .foreground_cwd // empty) | [$w, .] | @tsv'
+  fi
+}
+close_workspace() {
+  if [ -n "${HC_TERMINAL_ID:-}" ]; then herdr-app do space.close --id "$1" --confirmed true; else herdr workspace close "$1"; fi
+}
 
 # The workspaces with a pane in worktree $2, given panes() as $1: "all" those with every pane in it, else "some".
 workspaces_in() {
@@ -50,7 +60,7 @@ processes() {
 all_items() {
   local mains
   if [ "${1:-repo}" = all ]; then
-    mains=$(for g in "$HOME"/Repos/*/.git; do [ -d "$g" ] && echo "${g%/.git}"; done)
+    mains=$(for g in "$HOME"/Repos/*/*/.git; do [ -d "$g" ] && echo "${g%/.git}"; done)
   else
     mains=$(main_checkout)
   fi
@@ -111,12 +121,15 @@ remove() {
   # From the main checkout, since the popup's own folder may be the one removed.
   wt -C "$main" remove --reap --foreground --yes "$path" || return 1
   # Closed only after wt succeeded, so a refused removal leaves the workspaces as they were.
-  for w in $(workspaces_in "$p" "$path" all); do herdr workspace close "$w" >/dev/null || true; done
+  for w in $(workspaces_in "$p" "$path" all); do close_workspace "$w" >/dev/null || true; done
 }
 
 list() {
   local picked failed sock answer
-  main_checkout >/dev/null || fail "Not in a git repository: $PWD"
+  local main
+  main=$(main_checkout) || fail "Not in a git repository: $PWD"
+  # The popup opens in the focused pane's folder, which may be a worktree it then removes.
+  cd "$main"
   SCOPE=$(mktemp -t herdr-worktrees-scope) sock="$SCOPE.sock"
   trap 'rm -f "$SCOPE" "$sock"' EXIT
   echo repo >"$SCOPE"

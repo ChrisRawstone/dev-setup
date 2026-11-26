@@ -1,0 +1,83 @@
+#!/usr/bin/env bash
+# Keeps the Mac awake while Herdr agents work, lid closed included, and restarts Claude panes that
+# gave up on the network once it is back.
+#   keep-awake start   detach the watcher unless one is already running; the plugin runs this at Herdr startup
+#   keep-awake status  print whether the watcher runs and what it sees
+#   keep-awake watch   the watcher loop, every 30s:
+#     - a Claude pane is "stuck" when it is idle and its last message (last ⏺ line) is an "API Error"; once the
+#       network answers, it gets "continue" (at most 3 times); a stuck pane holds the Mac awake for at most 60 min
+#     - while any agent works or a pane is stuck: caffeinate -i, and the lid flag is 1 so the root helper
+#       (keep-awake-lid, installed by `sudo ./install-lid-helper`) sets pmset disablesleep 1; otherwise 0
+#     - exits when Herdr stops answering; the helper then lets the stale flag lapse to 0
+# shortcut: polls instead of events.subscribe (per-pane subscriptions plus backlog replay); fine at 30s.
+set -euo pipefail
+PATH="/opt/homebrew/bin:/usr/bin:/usr/sbin:$PATH"
+STATE="${XDG_STATE_HOME:-$HOME/.local/state}/herdr-keep-awake"
+PID="$STATE/pid" LOG="$STATE/log" FLAG="$STATE/lid"
+
+running() { [ -f "$PID" ] && kill -0 "$(cat "$PID")" 2>/dev/null; }
+log() { echo "$(date '+%F %T') $*" >>"$LOG"; }
+online() { curl -s -o /dev/null -m 5 https://api.anthropic.com; }
+# Rewritten every tick so the helper can tell a live watcher from a dead one.
+lid() { [ "$(cat "$FLAG" 2>/dev/null)" = "$1" ] || log "lid-closed awake $1"; echo "$1" >"$FLAG"; }
+api_error() { herdr pane read "$1" --source visible 2>/dev/null | grep '^⏺' | tail -1 | grep -q 'API Error'; }
+
+# Marks idle Claude panes whose last message is an API error (stuck-<id> holds "since tries"), clears the rest,
+# and prints "<id> <tries> <seconds stuck>" for each. A pane is read (visible screen only: --source recent makes
+# Herdr wheel-scroll an idle agent to harvest history, herdr#2669) only when it has just turned idle or done:
+# reading every pane each tick makes the Herdr window stutter.
+stuck() {
+  local id st f now since tries seen=" " prev cur; now=$(date +%s)
+  prev=$(cat "$STATE/statuses" 2>/dev/null || true)
+  cur=$(jq -r '.result.panes[] | select(.agent == "claude") | "\(.pane_id) \(.agent_status)"' <<<"$1")
+  echo "$cur" >"$STATE/statuses"
+  while read -r id st; do
+    [ "$st" = idle ] || [ "$st" = done ] || continue
+    f="$STATE/stuck-$id"
+    if grep -qxF "$id $st" <<<"$prev"; then [ -f "$f" ] || continue
+    elif api_error "$id" </dev/null; then [ -f "$f" ] || echo "$now 0" >"$f"
+    else continue; fi
+    seen+="$id "
+    read -r since tries <"$f"
+    echo "$id $tries $((now - since))"
+  done <<<"$cur"
+  for f in "$STATE"/stuck-*; do
+    [ -e "$f" ] && [[ $seen != *" ${f##*/stuck-} "* ]] && rm -f "$f"
+  done
+  return 0
+}
+
+case ${1:-} in
+  start)
+    running && exit 0
+    mkdir -p "$STATE"
+    nohup "$0" watch >/dev/null 2>&1 &
+    echo $! >"$PID" ;;
+  watch)
+    trap 'echo 0 >"$FLAG"; rm -f "$PID"' EXIT
+    while panes=$(herdr pane list); do
+      working=$(jq '[.result.panes[] | select(.agent_status == "working")] | length' <<<"$panes")
+      awake=$working is_online=
+      while read -r id tries secs; do
+        [ -n "$id" ] || continue
+        [ "$secs" -lt 3600 ] && awake=1
+        [ "$tries" -lt 3 ] || continue
+        [ -n "$is_online" ] || { online && is_online=1 || is_online=0; }
+        [ "$is_online" = 1 ] || continue
+        read -r since _ <"$STATE/stuck-$id"
+        echo "$since $((tries + 1))" >"$STATE/stuck-$id"
+        herdr pane run "$id" continue </dev/null >/dev/null && log "sent continue to $id (try $((tries + 1)))"
+      done <<<"$(stuck "$panes")"
+      if [ "$awake" -gt 0 ]; then
+        caffeinate -i -t 45 &
+        lid 1
+      else lid 0; fi
+      sleep 30
+    done ;;
+  status)
+    running && echo "watching (pid $(cat "$PID"))" || echo "not running"
+    pmset -g | awk '/SleepDisabled/{print "lid-closed sleep disabled: " $2}'
+    launchctl print system/com.craasteen.herdr-keep-awake-lid >/dev/null 2>&1 && echo "lid helper: loaded" || echo "lid helper: not installed (sudo ./install-lid-helper)"
+    tail -5 "$LOG" 2>/dev/null || true ;;
+  *) sed -n '2,13p' "$0"; exit 1 ;;
+esac

@@ -58,14 +58,14 @@ migration (full wipe), but works for any fresh Mac.
    ```
 6. **Get this repo** (public, so no keys or login needed):
    ```bash
-   git clone https://github.com/ChrisRawstone/dev-setup.git ~/Repos/dev-setup
-   git -C ~/Repos/dev-setup remote set-url --push origin git@github-chrisrawstone:ChrisRawstone/dev-setup.git
+   git clone https://github.com/ChrisRawstone/dev-setup.git ~/Repos/personal/dev-setup
+   git -C ~/Repos/personal/dev-setup remote set-url --push origin git@github-chrisrawstone:ChrisRawstone/dev-setup.git
    ```
-   (The second line makes pushes use your SSH key.) No network? Use the backup copy: `cp -R "$B/dev-setup" ~/Repos/dev-setup`
+   (The second line makes pushes use your SSH key.) No network? Use the backup copy: `cp -R "$B/dev-setup" ~/Repos/personal/dev-setup`
 7. **Get admin, then run everything.** Company Portal → *Promote user to Admin for 10 minutes*,
    then straight away:
    ```bash
-   ~/Repos/dev-setup/init_script.sh --all
+   ~/Repos/personal/dev-setup/init_script.sh --all
    ```
    Homebrew's installer needs admin at the start; the rest doesn't. If you aren't admin
    when the apps install, they go to `~/Applications` (they work the same, and update
@@ -73,7 +73,7 @@ migration (full wipe), but works for any fresh Mac.
 8. **Read the recap at the end.** Every failure has a suggested fix. Fix it, then run the same
    command again: finished steps are skipped. Full output: `~/.local/state/dev-setup/init-<time>.log`.
 9. **When Xcode has finished downloading** (~10 GB): get admin again, then
-   `~/Repos/dev-setup/init_script.sh --extras`. It selects Xcode and builds Macchiato.
+   `~/Repos/personal/dev-setup/init_script.sh --extras`. It selects Xcode and builds Macchiato.
 10. **Open a new Ghostty window** and do the sign-ins the recap lists (Claude Code, Cursor,
     ChatGPT, 1Password, Chrome/Firefox sync, Notion, `gh auth login`, `az login`). Sign in to
     iCloud again if you use it.
@@ -123,11 +123,12 @@ migration (full wipe), but works for any fresh Mac.
 | `starship/starship.toml` | `~/.config/starship.toml` |
 | `worktrunk/config.toml` | `~/.config/worktrunk/config.toml` |
 | `herdr/config.toml` | `~/.config/herdr/config.toml` |
-| `claude/CLAUDE.md`, `statusline.sh`, `turn-timer.sh`, `hooks/` | `~/.claude/` |
+| `herdr-app/keys.json`, `herdr-app/mods/popup-*` (the old prefix keys and popups) | `~/.config/herdr-app/` (after `ctrl-alt-shift-escape`, rerun `./init_script.sh` to relink keys.json; restart Herdr after editing a mod here) |
+| `statusline.sh`, `turn-timer.sh`, `hooks/` (from `claude/`), `agents/global/AGENTS.md` as `CLAUDE.md` | `~/.claude/` |
 | `codex/herdr-agent-state.sh`, `rules/default.rules` | `~/.codex/` |
 | `cursor/herdr-agent-state.sh` | `~/.cursor/` |
 | `ccstatusline/settings.json`, `cxstatusline/settings.json`, `cxstatusline/turn-renderer.mjs` | `~/.config/ccstatusline/`, `~/.config/cxstatusline/` |
-| `git/gitconfig`, `git/gitconfig-personal` | `~/.gitconfig`, `~/.gitconfig.personal` (work email stays in untracked `~/.gitconfig.local`; repos on the ChrisRawstone account use the GitHub noreply address) |
+| `git/gitconfig`, `git/gitconfig-personal`, `git/gitconfig-work` | `~/.gitconfig`, `~/.gitconfig.personal`, `~/.gitconfig.work` (the folder picks the identity: `~/Repos/personal` commits as ChrisRawstone, `~/Repos/work` as work; the work email stays in untracked `~/.gitconfig.local`) |
 | `vscode/User/`, `cursor/User/` settings + keybindings | `~/Library/Application Support/{Code,Cursor}/User/` |
 | `skills/web-preview`, `codex/skills/claude-skill` | `~/.agents/skills/`, `~/.claude/skills/`, `~/.codex/skills/` |
 
@@ -139,6 +140,7 @@ themselves, so run `./sync.sh` to pull their changes back into the repo before c
 | `claude/settings.json` | `~/.claude/settings.json` |
 | `codex/hooks.json` | `~/.codex/hooks.json` |
 | `codex/config.base.toml` | `~/.codex/config.toml` (only if it doesn't exist yet) |
+| `herdr-app/settings.json` | `~/.config/herdr-app/settings.json` (only if it doesn't exist yet) |
 | `cursor/hooks.json` | `~/.cursor/hooks.json` |
 | `ssh/config` (host aliases only, never keys) | `~/.ssh/config` |
 
@@ -148,7 +150,7 @@ Anything already at a destination is moved to `<dest>.pre-dotfiles-<timestamp>`,
 
 ```bash
 # Changed a linked file (zshrc, CLAUDE.md, editor settings...)? It's already in the repo:
-git -C ~/Repos/dev-setup status
+git -C ~/Repos/personal/dev-setup status
 
 # An app changed one of its own config files (Claude settings, hooks...)? Pull it in:
 ./sync.sh

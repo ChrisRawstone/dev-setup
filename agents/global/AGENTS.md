@@ -24,6 +24,9 @@ so I see what you do:
   get title | get url | eval 'js' | screenshot <abs.png> | open '<url>'`, then Read the screenshot.
   Snapshot again after any page change (refs change), quote URLs (zsh globs `?`), and end with
   `terminal-browser action --browser <key> done` to hand control back.
+- Keep one tab per browser: go to a new page with `open '<url>'` in the tab that is there, never
+  `tab new`. Before `done`, run `tab list` and `tab close <n>` on every tab you added. Each extra
+  tab keeps running at full speed, also when nobody sees it, and slows the browser down.
 - Always pass `--browser <key>`: in herdr-app, terminal-browser can't tell which pane it's in, so a
   bare `action` fails ("no terminal browser in this terminal tab"). Don't use `--split` or
   `new-tab` there.

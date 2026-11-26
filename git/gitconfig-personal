@@ -1,2 +1,7 @@
 [user]
-	email = 52676332+ChrisRawstone@users.noreply.github.com
+	name = ChrisRawstone
+	email = christian.raasteen@outlook.com
+# Every GitHub remote goes through the ChrisRawstone SSH key (Host github-chrisrawstone in ~/.ssh/config)
+[url "git@github-chrisrawstone:"]
+	insteadOf = git@github.com:
+	insteadOf = https://github.com/

@@ -1,6 +1,7 @@
 worktree-path = "{{ repo_path }}/.claude/worktrees/{{ branch | sanitize }}"
 
-[post-start]
+# pre-start (blocking): new-worktree.sh and dev-stack read .env right after creation
+[pre-start]
 copy_env_files = """
 source_root="{{ primary_worktree_path }}"
 
@@ -13,4 +14,11 @@ for f in .env backend/.env frontend/.env; do
     cp "$src" "$dst"
   fi
 done
+"""
+link_todo = """
+todo="{{ primary_worktree_path }}/TODO.local.md"
+if [ -e "$todo" ] && [ ! -e "{{ worktree_path }}/TODO.local.md" ]; then
+  # relative, so the link survives moving the repo
+  ln -s "$(perl -MFile::Spec -e 'print File::Spec->abs2rel(@ARGV)' "$todo" "{{ worktree_path }}")" "{{ worktree_path }}/TODO.local.md"
+fi
 """

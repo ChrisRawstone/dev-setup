@@ -11,3 +11,10 @@ Host github-chrisrawstone
     User git
     IdentityFile ~/.ssh/id_ed25519_chrisrawstone
     IdentitiesOnly yes
+
+# Home Assistant (Terminal & SSH add-on). Home LAN only; away needs a VPN.
+Host ha
+    HostName homeassistant.local
+    User root
+    IdentityFile ~/.ssh/id_ed25519
+    IdentitiesOnly yes

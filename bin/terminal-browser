@@ -1,0 +1,14 @@
+#!/bin/sh
+# Wraps Homebrew's terminal-browser so `terminal-browser action` works here (0.13.4–0.15.3).
+# shortcut: two upstream bugs; delete this file and bin/terminal-browser-agent once both are fixed.
+
+# zenbu-labs/terminal-browser#121: agent-browser's socket path is over macOS's 103 bytes for this home folder.
+export TERMINAL_BROWSER_AGENT="${TERMINAL_BROWSER_AGENT:-$HOME/.local/bin/terminal-browser-agent}"
+
+# herdr-app panes say TERM_PROGRAM=ghostty, so action/ls ask Ghostty.app for the pane and fail.
+# With no terminal detected they work, given `--browser <key>` (from `terminal-browser ls --all --json`).
+if [ -n "${HC_TERMINAL_ID:-}" ] && [ -z "${HERDR_PANE_ID:-}" ]; then
+  case "${1:-}" in action | ls) unset TERM_PROGRAM GHOSTTY_RESOURCES_DIR ;; esac
+fi
+
+exec /opt/homebrew/bin/terminal-browser "$@"

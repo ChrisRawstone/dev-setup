@@ -1,0 +1,20 @@
+# Ctrl-click a file:// link (Claude Code draws [name](/abs/path:12) as one): code → Cursor, HTML → browser, images/PDF → Preview, rest → default app.
+# Bare paths aren't links in Herdr; prefix+shift+o (../../open-paths) covers those.
+id = "craasteen.open-in-cursor"
+name = "Open file"
+version = "0.1.0"
+min_herdr_version = "0.9.3"
+description = "Ctrl-click file links: code in Cursor, HTML in the browser, images and PDFs in Preview, the rest in their default app"
+platforms = ["macos"]
+
+[[actions]]
+id = "open"
+title = "Open clicked file"
+contexts = ["global"]
+command = ["./open-in-cursor"]
+
+[[link_handlers]]
+id = "file"
+title = "Open file"
+pattern = '^file://'
+action = "open"

@@ -13,102 +13,58 @@
     "defaultMode": "auto"
   },
   "model": "opus",
-  "hooks": {
-    "UserPromptSubmit": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "__HOME__/.claude/turn-timer.sh start"
-          }
-        ]
-      }
-    ],
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "__HOME__/.claude/turn-timer.sh stop"
-          }
-        ]
-      }
-    ],
-    "SessionStart": [
-      {
-        "matcher": "^(startup|resume|clear|compact|fork)$",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash '__HOME__/.claude/hooks/herdr-agent-state.sh' session",
-            "timeout": 10
-          }
-        ]
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "__HOME__/.claude/hooks/hc-session-record.py",
-            "timeout": 5,
-            "async": true
-          }
-        ]
-      }
-    ],
-    "SessionEnd": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "__HOME__/.claude/hooks/hc-session-record.py",
-            "timeout": 5
-          }
-        ]
-      }
-    ]
+  "enabledMcpjsonServers": [
+    "marketplace-railway",
+    "home-assistant",
+    "railway",
+    "apify",
+    "ms365-personal"
+  ],
+  "skillOverrides": {
+    "find-skills": "off",
+    "anthropic-skills:docx": "name-only",
+    "anthropic-skills:pdf": "name-only",
+    "anthropic-skills:pptx": "name-only",
+    "anthropic-skills:docs": "name-only",
+    "anthropic-skills:google-workspace": "name-only",
+    "anthropic-skills:morning": "name-only",
+    "anthropic-skills:import-memory": "name-only",
+    "anthropic-skills:skill-creator": "name-only"
   },
-  "statusLine": {
-    "type": "command",
-    "command": "__HOME__/.claude/statusline.sh",
-    "padding": 1,
-    "refreshInterval": 15
-  },
-  "enabledPlugins": {
-    "swift-lsp@claude-plugins-official": true,
-    "codex@openai-codex": true,
-    "terminal-browser@terminal-browser": true,
-    "worktrunk@worktrunk": true
-  },
-  "extraKnownMarketplaces": {
-    "openai-codex": {
-      "source": {
-        "source": "github",
-        "repo": "openai/codex-plugin-cc"
-      }
-    },
-    "terminal-browser": {
-      "source": {
-        "source": "github",
-        "repo": "zenbu-labs/terminal-browser"
-      }
-    },
-    "worktrunk": {
-      "source": {
-        "source": "github",
-        "repo": "max-sixty/worktrunk"
-      }
-    },
-    "claude-plugins-official": {
-      "source": {
-        "source": "github",
-        "repo": "anthropics/claude-plugins-official"
-      }
-    }
-  },
-  "feedbackDrafts": "off",
-  "theme": "dark",
   "deniedMcpServers": [
+    {
+      "serverName": "claude.ai Atlassian Rovo"
+    },
+    {
+      "serverName": "claude.ai ChEMBL"
+    },
+    {
+      "serverName": "claude.ai Clinical Trials"
+    },
+    {
+      "serverName": "claude.ai Context7"
+    },
+    {
+      "serverName": "claude.ai ElevenLabs"
+    },
+    {
+      "serverName": "claude.ai Excalidraw"
+    },
+    {
+      "serverName": "claude.ai PubMed"
+    },
+    {
+      "serverName": "claude.ai S&P Global"
+    },
+    {
+      "serverName": "claude.ai Strava"
+    },
+    {
+      "serverName": "claude.ai bioRxiv"
+    },
+    {
+      "serverName": "claude.ai monday.com"
+    },
     {
       "serverName": "claude.ai Asana"
     },
@@ -155,14 +111,200 @@
       "serverName": "claude.ai Claude Data"
     }
   ],
-  "skillOverrides": {
-    "anthropic-skills:docx": "name-only",
-    "anthropic-skills:pdf": "name-only",
-    "anthropic-skills:pptx": "name-only",
-    "anthropic-skills:docs": "name-only",
-    "anthropic-skills:google-workspace": "name-only",
-    "anthropic-skills:morning": "name-only",
-    "anthropic-skills:import-memory": "name-only",
-    "anthropic-skills:skill-creator": "name-only"
-  }
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "__HOME__/.claude/hooks/allow-personal-deploys.py",
+            "timeout": 5
+          }
+        ]
+      },
+      {
+        "matcher": "WebFetch",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "__HOME__/.claude/hooks/blocked-fetch-hint.py",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "__HOME__/.claude/turn-timer.sh start"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "__HOME__/.claude/turn-timer.sh stop"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "^(startup|resume|clear|compact|fork)$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash '__HOME__/.claude/hooks/herdr-agent-state.sh' session",
+            "timeout": 10,
+            "async": true
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "__HOME__/.claude/hooks/hc-session-record.py",
+            "timeout": 5,
+            "async": true
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "WebFetch|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "__HOME__/.claude/hooks/blocked-fetch-hint.py",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PostToolUseFailure": [
+      {
+        "matcher": "WebFetch|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "__HOME__/.claude/hooks/blocked-fetch-hint.py",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "__HOME__/.claude/hooks/hc-session-record.py",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "__HOME__/.claude/statusline.sh",
+    "padding": 1,
+    "refreshInterval": 15
+  },
+  "enabledPlugins": {
+    "swift-lsp@claude-plugins-official": false,
+    "codex@openai-codex": true,
+    "terminal-browser@terminal-browser": true,
+    "worktrunk@worktrunk": true,
+    "ponytail@ponytail": true,
+    "stripe@claude-plugins-official": false,
+    "cloudflare@cloudflare": false,
+    "1password@1password": false,
+    "homeclaw@homeclaw": false
+  },
+  "extraKnownMarketplaces": {
+    "openai-codex": {
+      "source": {
+        "source": "github",
+        "repo": "openai/codex-plugin-cc"
+      }
+    },
+    "terminal-browser": {
+      "source": {
+        "source": "github",
+        "repo": "zenbu-labs/terminal-browser"
+      }
+    },
+    "worktrunk": {
+      "source": {
+        "source": "github",
+        "repo": "max-sixty/worktrunk"
+      }
+    },
+    "claude-plugins-official": {
+      "source": {
+        "source": "github",
+        "repo": "anthropics/claude-plugins-official"
+      }
+    },
+    "ponytail": {
+      "source": {
+        "source": "github",
+        "repo": "DietrichGebert/ponytail"
+      }
+    },
+    "cloudflare": {
+      "source": {
+        "source": "github",
+        "repo": "cloudflare/skills"
+      }
+    },
+    "1password": {
+      "source": {
+        "source": "github",
+        "repo": "1Password/1password-claude-plugin"
+      }
+    },
+    "homeclaw": {
+      "source": {
+        "source": "github",
+        "repo": "omarshahine/HomeClaw"
+      }
+    }
+  },
+  "feedbackDrafts": "off",
+  "modelSettings": {
+    "claude-opus-5-5": {
+      "effortLevel": "medium"
+    }
+  },
+  "pluginConfigs": {
+    "cc-plugin-agents-md@builtin": {
+      "options": {
+        "instructionFiles": "claude-md-and-agents-md"
+      }
+    }
+  },
+  "voice": {
+    "enabled": true,
+    "mode": "hold"
+  },
+  "skipDangerousModePermissionPrompt": true,
+  "skipWorkflowUsageWarning": true,
+  "theme": "dark",
+  "autoMode": {
+    "allow": [
+      "$defaults",
+      "mcp__plugin_cloudflare_cloudflare__execute"
+    ]
+  },
+  "voiceEnabled": true
 }

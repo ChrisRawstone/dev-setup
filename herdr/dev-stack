@@ -33,7 +33,7 @@ printf '  \e[32mmlflow\e[0m  http://127.0.0.1:%s\n\n' "$MLFLOW_PORT"
 
 run mlflow 32 uv run --locked mlflow ui --backend-store-uri "sqlite:///$store/mlflow.db" \
   --artifacts-destination "$store/artifacts" --port "$MLFLOW_PORT"
-run api 34 just api
+run api 34 just "$(just --summary | tr ' ' '\n' | grep -qx serve && echo serve || echo api)"
 [ -n "$has_mcp" ] && run mcp 35 just mcp
 run web 36 env API_PORT="$API_PORT" bun run --cwd web dev --port "$WEB_PORT" --strictPort
 wait

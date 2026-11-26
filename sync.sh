@@ -16,6 +16,7 @@ pull "$HOME/.claude/settings.json" "claude/settings.json"
 pull "$HOME/.codex/hooks.json" "codex/hooks.json"
 pull "$HOME/.cursor/hooks.json" "cursor/hooks.json"
 pull "$HOME/.ssh/config" "ssh/config"
+pull "$HOME/.config/herdr-app/settings.json" "herdr-app/settings.json"
 
 if [[ "$1" == "--installed" ]]; then
   local_only=$(grep -v '^#' "$DOTFILES_DIR/local-extensions.txt")

@@ -1,0 +1,6 @@
+[user]
+# email comes from the untracked ~/.gitconfig.local (this repo is public)
+	name = Christian Raasteen
+# HTTPS GitHub remotes go through the halfspace SSH key (Host github.com in ~/.ssh/config), not gh's active account
+[url "git@github.com:"]
+	insteadOf = https://github.com/

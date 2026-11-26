@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+# Clear terminal-browser lag without leaving your work (Prefix+Shift+L in config.toml). Notes which page
+# each browser pane shows, closes the browsers, ends the Herdr client so the `herdr` function in zshrc
+# reattaches a fresh one, then reopens every browser on its page in its pane. Panes keep running.
+# Usage: refresh-client [client pid...]   (pids: only those clients and no browsers, for testing)
+set -euo pipefail
+PATH="/opt/homebrew/bin:$PATH"
+state="${XDG_STATE_HOME:-$HOME/.local/state}"
+mkdir -p "$state"
+
+# Attached clients: `herdr`, `herdr --session x`, `herdr session attach x`, not the server or CLI calls.
+clients() {
+  ps -axo pid=,args= | awk '$2 ~ /(^|\/)herdr$/ && (NF == 2 || $3 == "--session" || ($3 == "session" && $4 == "attach")) { print $1 }'
+}
+
+all=$(clients)
+if [ $# -gt 0 ]; then
+  old=$(printf '%s\n' "$@") pages=""
+else
+  old=$all
+  pages=$(terminal-browser ls --all --json 2>/dev/null | jq -r '.browsers[] | select(.pane.pane)
+    | [.pane.pane, (((.tabs // []) | (map(select(.active))[0] // .[0])) | .url // "")] | @tsv' || true)
+  terminal-browser shutdown >/dev/null 2>&1 || true
+fi
+[ -n "$old" ] || exit 0
+
+touch "$state/herdr-refresh"  # tells the zsh `herdr` function to reattach
+kill $old
+
+# Wait for the fresh client, then give each browser pane its page back.
+for _ in $(seq 100); do
+  new=$(clients | grep -vxF "$all" || true)
+  [ -n "$new" ] && break
+  sleep 0.2
+done
+[ -n "${new:-}" ] && [ -n "$pages" ] || exit 0
+sleep 1
+while IFS=$'\t' read -r pane url; do
+  [ -n "$url" ] || continue
+  herdr pane run "$pane" "terminal-browser open '$url'" >/dev/null 2>&1 || true
+done <<<"$pages"

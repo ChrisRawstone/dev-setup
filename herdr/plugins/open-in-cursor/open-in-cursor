@@ -1,0 +1,27 @@
+#!/bin/bash
+# Ctrl-clicked file:// link → text/code in Cursor (at :line or #L12), HTML in the browser, images and PDFs in Preview, the rest in
+# their default app (docx → Word). Code in a git repo opens in that repo's Cursor window (reused if open).
+set -euo pipefail
+u=${HERDR_PLUGIN_CLICKED_URL:?}; u=${u#file://}
+[[ $u == /* ]] || u=/${u#*/}                       # drop a host: file://localhost/path
+line=; [[ $u =~ \#L([0-9]+) ]] && line=${BASH_REMATCH[1]}; u=${u%%#*}
+[[ $u =~ ^(.*):([0-9]+)(:[0-9]+)?$ ]] && { u=${BASH_REMATCH[1]}; line=${BASH_REMATCH[2]}; }
+printf -v path %b "${u//%/\\x}"                    # percent-decode; u stays encoded for the cursor:// URL
+mime=missing; [[ -e $path ]] && mime=$(/usr/bin/file -b --mime-type "$path")
+case $mime in
+  image/svg+xml|image/*|application/pdf) app=(-a Preview "$path") ;;
+  text/html) app=("$path") ;;                      # HTML → its default app, the browser
+  text/*|application/json|application/xml|application/javascript|inode/x-empty|missing) app=("cursor://file$u${line:+:$line}") ;;
+  *) app=("$path") ;;
+esac
+# In a git repo, open the repo first: Cursor focuses the window that already has it (or opens one), and the
+# cursor:// URL then lands the file in that window.
+repo=; [[ ${app[0]} == cursor://* ]] && repo=$(PATH="/opt/homebrew/bin:/usr/bin:$PATH" git -C "${path%/*}" rev-parse --show-toplevel 2>/dev/null) || true
+[[ -n ${DRY_RUN:-} ]] && { echo "${repo:+repo $repo; }${app[*]}"; exit; }
+if [[ -n $repo ]] && ! /usr/bin/pgrep -xq Cursor; then
+  # Cold start: the URL would beat the repo window and land in a window of its own. The CLI opens both in one
+  # go; its ~2 s hides inside Cursor's own startup.
+  exec /Applications/Cursor.app/Contents/Resources/app/bin/cursor "$repo" -g "$path${line:+:$line}"
+fi
+[[ -n $repo ]] && /usr/bin/open -a Cursor "$repo"
+exec /usr/bin/open "${app[@]}"

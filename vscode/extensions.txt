@@ -7,7 +7,6 @@ donjayamanne.githistory
 firefox-devtools.vscode-firefox-debug
 fooxly.workspace
 james-yu.latex-workshop
-mechatroner.rainbow-csv
 ms-azuretools.vscode-containers
 ms-playwright.playwright
 ms-python.debugpy
@@ -28,7 +27,6 @@ ms-vscode.remote-explorer
 ms-vscode.remote-server
 ms-vsliveshare.vsliveshare
 pkief.material-icon-theme
-qufiwefefwoyn.inline-sql-syntax
 repreng.csv
 svelte.svelte-vscode
 tailscale.vscode-tailscale
