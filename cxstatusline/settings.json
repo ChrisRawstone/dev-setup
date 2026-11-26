@@ -46,6 +46,20 @@
         "rawValue": true
       },
       {
+        "id": "sid-sep",
+        "type": "separator",
+        "color": "hex:787d87",
+        "bold": false,
+        "character": " \u00b7 "
+      },
+      {
+        "id": "sid",
+        "type": "codex-session-id",
+        "color": "hex:ec4899",
+        "bold": false,
+        "rawValue": true
+      },
+      {
         "id": "7",
         "type": "separator",
         "color": "hex:787d87",
@@ -110,13 +124,25 @@
     ],
     [
       {
+        "id": "5h-label",
+        "type": "custom-text",
+        "color": "hex:787d87",
+        "bold": false,
+        "customText": "5h ",
+        "merge": "no-padding",
+        "metadata": {
+          "hide": "merge-target-hidden"
+        }
+      },
+      {
         "id": "15",
         "type": "five-hour-usage",
         "color": "hex:4ade80",
         "bold": false,
         "metadata": {
           "hide": "no-data"
-        }
+        },
+        "rawValue": true
       },
       {
         "id": "16",
@@ -148,13 +174,25 @@
         "character": " \u00b7 "
       },
       {
+        "id": "7d-label",
+        "type": "custom-text",
+        "color": "hex:787d87",
+        "bold": false,
+        "customText": "7d ",
+        "merge": "no-padding",
+        "metadata": {
+          "hide": "merge-target-hidden"
+        }
+      },
+      {
         "id": "19",
         "type": "weekly-usage",
         "color": "hex:4ade80",
         "bold": false,
         "metadata": {
           "hide": "no-data"
-        }
+        },
+        "rawValue": true
       },
       {
         "id": "20",

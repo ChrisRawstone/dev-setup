@@ -126,7 +126,7 @@ migration (full wipe), but works for any fresh Mac.
 | `claude/CLAUDE.md`, `statusline.sh`, `turn-timer.sh`, `hooks/` | `~/.claude/` |
 | `codex/herdr-agent-state.sh`, `rules/default.rules` | `~/.codex/` |
 | `cursor/herdr-agent-state.sh` | `~/.cursor/` |
-| `ccstatusline/settings.json`, `cxstatusline/settings.json` | `~/.config/ccstatusline/`, `~/.config/cxstatusline/` |
+| `ccstatusline/settings.json`, `cxstatusline/settings.json`, `cxstatusline/turn-renderer.mjs` | `~/.config/ccstatusline/`, `~/.config/cxstatusline/` |
 | `git/gitconfig`, `git/gitconfig-personal` | `~/.gitconfig`, `~/.gitconfig.personal` (work email stays in untracked `~/.gitconfig.local`; repos on the ChrisRawstone account use the GitHub noreply address) |
 | `vscode/User/`, `cursor/User/` settings + keybindings | `~/Library/Application Support/{Code,Cursor}/User/` |
 | `skills/web-preview`, `codex/skills/claude-skill` | `~/.agents/skills/`, `~/.claude/skills/`, `~/.codex/skills/` |
@@ -140,7 +140,6 @@ themselves, so run `./sync.sh` to pull their changes back into the repo before c
 | `codex/hooks.json` | `~/.codex/hooks.json` |
 | `codex/config.base.toml` | `~/.codex/config.toml` (only if it doesn't exist yet) |
 | `cursor/hooks.json` | `~/.cursor/hooks.json` |
-| `cxstatusline/turn-renderer.py` | `~/.config/cxstatusline/turn-renderer.py` |
 | `ssh/config` (host aliases only, never keys) | `~/.ssh/config` |
 
 Anything already at a destination is moved to `<dest>.pre-dotfiles-<timestamp>`, never deleted.

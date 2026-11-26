@@ -264,7 +264,7 @@ render_config "cursor/hooks.json" "$HOME/.cursor/hooks.json"
 # Statuslines
 link_config "ccstatusline/settings.json" "$HOME/.config/ccstatusline/settings.json"
 link_config "cxstatusline/settings.json" "$HOME/.config/cxstatusline/settings.json"
-render_config "cxstatusline/turn-renderer.py" "$HOME/.config/cxstatusline/turn-renderer.py"
+link_config "cxstatusline/turn-renderer.mjs" "$HOME/.config/cxstatusline/turn-renderer.mjs"
 link_config "bin/cxstatusline" "$HOME/.local/bin/cxstatusline"
 
 # Git and SSH (host aliases only; keys never live in this repo)

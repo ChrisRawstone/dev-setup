@@ -15,7 +15,6 @@ pull() {
 pull "$HOME/.claude/settings.json" "claude/settings.json"
 pull "$HOME/.codex/hooks.json" "codex/hooks.json"
 pull "$HOME/.cursor/hooks.json" "cursor/hooks.json"
-pull "$HOME/.config/cxstatusline/turn-renderer.py" "cxstatusline/turn-renderer.py"
 pull "$HOME/.ssh/config" "ssh/config"
 
 if [[ "$1" == "--installed" ]]; then

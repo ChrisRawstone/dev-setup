@@ -187,6 +187,29 @@ fi
 STALE_MARK=""
 [ "$STALE" = 1 ] && STALE_MARK="${C_DIM}~${RESET}"
 
+# ---- Fable weekly window ----------------------------------------------------
+# Not in the statusLine payload, so read it from the usage endpoint /usage uses,
+# in the background at most every 2 min (touching the file first keeps parallel
+# sessions from fetching at once); this render shows the last fetched value.
+FABLE_FILE="${HOME}/.claude/cache/statusline-fable"
+if [ ! -f "$FABLE_FILE" ] || (( NOW - $(stat -f %m "$FABLE_FILE") > 120 )); then
+  mkdir -p "${FABLE_FILE%/*}" 2>/dev/null; touch "$FABLE_FILE"
+  (
+    TOKEN="$(security find-generic-password -s 'Claude Code-credentials' -w 2>/dev/null | jq -r '.claudeAiOauth.accessToken // empty')"
+    [ -n "$TOKEN" ] || exit 0
+    curl -sf -m 10 https://api.anthropic.com/api/oauth/usage \
+        -H "Authorization: Bearer ${TOKEN}" -H 'anthropic-beta: oauth-2025-04-20' \
+      | jq -r 'first(.limits[]? | select(.kind == "weekly_scoped" and .scope.model.display_name == "Fable"))
+               | "\(.percent)\u001f\(.resets_at[0:19] + "Z" | fromdateiso8601)"' > "${FABLE_FILE}.$$" \
+      && [ -s "${FABLE_FILE}.$$" ] && mv -f "${FABLE_FILE}.$$" "$FABLE_FILE"
+    rm -f "${FABLE_FILE}.$$"
+  ) </dev/null >/dev/null 2>&1 &
+fi
+FB_PCT=-1
+IFS=$'\037' read -r F_PCT F_RESET < "$FABLE_FILE" 2>/dev/null
+# A window whose reset has passed rolled over; its old percentage means nothing.
+[ -n "$F_PCT" ] && (( $(int_part "${F_RESET:-0}") > NOW )) && FB_PCT="$F_PCT" FB_RESET="$F_RESET"
+
 # ---- line 2: usage windows + cost / duration / lines changed --------------
 
 L2_PARTS=()
@@ -207,6 +230,11 @@ else
     R7_ETA="$(fmt_eta "$R7_RESET")"
     L2_PARTS+=("${C_DIM}7d${RESET} ${STALE_MARK}${R7_COLOR}${R7_PCT_I}%${RESET} ${C_DIM}↺${C_TEXT}${R7_ETA}${RESET}")
   fi
+fi
+
+if [ "$FB_PCT" != "-1" ]; then
+  FB_PCT_I="$(int_part "$FB_PCT")"
+  L2_PARTS+=("${C_DIM}fable${RESET} $(pct_color "$FB_PCT_I")${FB_PCT_I}%${RESET} ${C_DIM}↺${C_TEXT}$(fmt_eta "$FB_RESET")${RESET}")
 fi
 
 L2_PARTS+=("${C_COST}\$${COST_FMT}${RESET}")

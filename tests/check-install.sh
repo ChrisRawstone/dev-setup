@@ -34,9 +34,9 @@ links=$(grep -c '^Linking' "$LOGS/run1.log")
 renders=$(grep -c '^Rendering' "$LOGS/run1.log")
 broken=$(grep '^Linking' "$LOGS/run1.log" | sed 's/.* -> //' | while read -r d; do [[ -e "$d" ]] || echo "$d"; done)
 [[ -z "$broken" ]] && pass "$links symlinks created, none broken" || fail "broken links: $broken"
-[[ $renders -eq 6 ]] && pass "6 files rendered" || fail "rendered $renders files (expected 6)"
+[[ $renders -eq 5 ]] && pass "5 files rendered" || fail "rendered $renders files (expected 5)"
 
-for f in ~/.ssh/config ~/.claude/settings.json ~/.codex/hooks.json ~/.cursor/hooks.json ~/.config/cxstatusline/turn-renderer.py ~/.codex/config.toml; do
+for f in ~/.ssh/config ~/.claude/settings.json ~/.codex/hooks.json ~/.cursor/hooks.json ~/.codex/config.toml; do
   grep -q '__HOME__' "$f" && fail "unrendered __HOME__ in $f"
 done
 grep -q "$HOME/.claude/turn-timer.sh" ~/.claude/settings.json && pass "rendered paths use $HOME" || fail "settings.json paths wrong"
@@ -79,12 +79,8 @@ else
   fail "statusline rc=$rc: $out"
 fi
 if command -v cxstatusline >/dev/null; then
-  python3 -I -c "
-import importlib.util, os, sys
-p = os.path.expanduser('~/.config/cxstatusline/turn-renderer.py')
-s = importlib.util.spec_from_file_location('tr', p); m = importlib.util.module_from_spec(s); s.loader.exec_module(m)
-sys.exit(0 if os.path.exists(m.NODE) and os.path.exists(m.RENDERER) else 1)" \
-    && pass "Codex statusline finds cxstatusline + node" || fail "turn-renderer.py can't find cxstatusline/node"
+  node -e "import('$HOME/.config/cxstatusline/turn-renderer.mjs').then(m => process.exit(m.RENDERER ? 0 : 1))" \
+    && pass "Codex statusline finds cxstatusline" || fail "turn-renderer.mjs can't find cxstatusline"
 fi
 echo '{"session_id":"t1"}' | ~/.claude/turn-timer.sh start && echo '{"session_id":"t1"}' | ~/.claude/turn-timer.sh stop \
   && pass "turn-timer start/stop" || fail "turn-timer"
