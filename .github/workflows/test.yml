@@ -93,12 +93,9 @@ jobs:
                        exit ${missing:-0}' 2> "$RUNNER_TEMP/zsh.err"
           rc=$?
           if [ -s "$RUNNER_TEMP/zsh.err" ]; then echo "zsh startup errors:"; cat "$RUNNER_TEMP/zsh.err"; rc=1; fi
-          env -i HOME="$HOME" PATH=/opt/homebrew/bin:/usr/bin:/bin python3 -I -c "
-          import importlib.util, os, sys
-          p = os.path.expanduser('~/.config/cxstatusline/turn-renderer.py')
-          s = importlib.util.spec_from_file_location('tr', p); m = importlib.util.module_from_spec(s); s.loader.exec_module(m)
-          print('turn-renderer:', m.NODE, m.RENDERER)
-          sys.exit(0 if os.path.exists(m.NODE) and os.path.exists(m.RENDERER) else 1)" || rc=1
+          # Codex runs the footer renderer with whatever PATH it has: it must work with a bare one
+          out=$(echo '{"payload_version":1,"model":{"name":"gpt"},"session":{"id":"ci","cwd":"/tmp"},"usage":{}}' \
+            | env -i HOME="$HOME" PATH=/opt/homebrew/bin:/usr/bin:/bin "$HOME/.local/bin/cxstatusline" render) && echo "codex footer: $out" || { echo "codex footer render failed"; rc=1; }
           exit $rc
       - name: Extras installed
         if: always()
@@ -118,7 +115,7 @@ jobs:
             check "claude plugin $p" "claude plugin list | grep -q '${p%@*}'"
           done
           check "codex wrapper (cxstatusline)" "grep -q 'cxstatusline.* render' ~/.local/bin/codex && ~/.local/bin/codex --version"
-          if ! grep -qs turn-renderer ~/.local/bin/codex; then
+          if ! grep -qs 'cxstatusline.* render' ~/.local/bin/codex; then
             echo "--- debug: ~/.local/bin"; ls -la ~/.local/bin 2>&1
             echo "--- debug: wrapper"; head -12 ~/.local/bin/codex 2>&1
             echo "--- debug: cxstatusline install -y"; cxstatusline install -y </dev/null 2>&1 | tail -15
