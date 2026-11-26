@@ -306,5 +306,8 @@
       "mcp__plugin_cloudflare_cloudflare__execute"
     ]
   },
-  "voiceEnabled": true
+  "voiceEnabled": true,
+  "disabledMcpjsonServers": [
+    "kiwi"
+  ]
 }

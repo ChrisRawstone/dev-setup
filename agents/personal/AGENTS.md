@@ -67,7 +67,7 @@ changes right away, even when it holds my unrelated uncommitted or staged work; 
 
 # MCP servers and connectors
 
-Personal MCP servers (`marketplace-railway`, `home-assistant`, `railway`, `apify`, `ms365-personal`, `kiwi`) live in
+Personal MCP servers (`marketplace-railway`, `home-assistant`, `railway`, `apify`, `ms365-personal`, `kiwi`; kiwi is off for now via `disabledMcpjsonServers` in `claude/settings.json`, until I turn it back on) live in
 `~/Repos/personal/.mcp.json`, which every repo and worktree below it picks up (`~/scratch` has them at local scope).
 Add a new personal server there, never at user scope, so work sessions never see it. Each personal folder's
 `.claude/settings.local.json` enables homeclaw, denies the work connectors (Notion, Slack, HS CV Machine, HS Proposal
