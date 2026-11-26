@@ -5,11 +5,13 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import module from 'node:module';
 import path from 'node:path';
+import tty from 'node:tty';
 import { pathToFileURL } from 'node:url';
 
 const HOME = process.env.HOME;
 const STATE_ROOT = path.join(HOME, '.local/state/cxstatusline/turn-timers');
 const PLACEHOLDER = 'turn —';
+const CHANGES = 'changes —';
 const RUNNING = new Set(['working', 'thinking', 'running', 'compacting', 'compacting context']);
 
 // cxstatusline next to this node (Homebrew or an nvm version), else Homebrew's.
@@ -33,11 +35,13 @@ export function duration(total) {
   return m ? `${m}m${sec.padStart(2, '0')}s` : `${sec}s`;
 }
 
-// Fill in the turn timer and, as Claude's bar does, show 8 chars of the session id and
-// git-changes "(+12,-3)" as green "+12", red "-3".
-export function restyle(text, label, id = '') {
+// Fill in the turn timer and, as Claude's bar does, show 8 chars of the session id and the
+// changes as green "+12", red "-3". They come from the payload: cxstatusline's own git-changes
+// widget runs git diff twice per render, which is a third of the time Codex allows it.
+export function restyle(text, label, id = '', changes = null) {
   if (id) text = text.replaceAll(id, id.slice(0, 8));
-  return text.replaceAll(PLACEHOLDER, label).replace(/\((\+\d+),(-\d+)\)/, '$1 \x1b[38;2;248;113;113m$2');
+  const { additions = 0, deletions = 0 } = changes || {};
+  return text.replaceAll(PLACEHOLDER, label).replace(CHANGES, `+${additions} \x1b[38;2;248;113;113m-${deletions}`);
 }
 
 function timerLabel(data) {
@@ -68,9 +72,18 @@ async function main() {
   fs.readFileSync = (file, ...rest) => (file === 0 ? (rest[0] ? raw.toString(rest[0]?.encoding ?? rest[0]) : raw) : readFileSync(file, ...rest));
   module.syncBuiltinESMExports();
   const write = process.stdout.write.bind(process.stdout);
-  process.stdout.write = (chunk, ...rest) => write(typeof chunk === 'string' ? restyle(chunk, label, id) : chunk, ...rest);
+  process.stdout.write = (chunk, ...rest) => write(typeof chunk === 'string' ? restyle(chunk, label, id, data.git?.changes) : chunk, ...rest);
   process.argv = [process.argv[0], RENDERER, 'render'];
   process.env.DEV = 'false';
+  // Without COLUMNS the renderer finds the width by running ps/stty up to ~17 times, which
+  // on this Mac alone can pass Codex's 1s limit. /dev/tty gives it with no process.
+  if (!process.env.COLUMNS) {
+    try {
+      const ttyFd = fs.openSync('/dev/tty', 'r');
+      const { columns } = new tty.ReadStream(ttyFd);
+      if (columns) process.env.COLUMNS = String(columns);
+    } catch {}
+  }
   module.enableCompileCache?.();
   await import(pathToFileURL(RENDERER).href);
 }

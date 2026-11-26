@@ -260,9 +260,10 @@
       },
       {
         "id": "26",
-        "type": "git-changes",
+        "type": "custom-text",
         "color": "hex:4ade80",
-        "bold": false
+        "bold": false,
+        "customText": "changes \u2014"
       }
     ],
     []
