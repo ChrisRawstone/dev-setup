@@ -1,4 +1,4 @@
-// Workspace spaces: stable colored avatars, worktrees under their checkout,
+// Workspace spaces: stable colored avatars, a branch line under worktree and branch spaces,
 // grouped by machine when more than one is known. After a space's name, the repo
 // its first terminal is in now, only where unusual: branch, ahead/behind. Agent state lives in the agents list, not here. Click to
 // switch, right-click for its menu, drag to reorder.
@@ -126,7 +126,6 @@ function place(s, ps) {
   const tabs = new Set((s.tabs ?? []).map((c) => c.id));
   return ps.find((p) => tabs.has(p.tab) && p.cwd)?.cwd || s.folder;
 }
-const rowHeight = ({ tree }) => (tree ? 28 : 30);
 const where = (s, ps) => JSON.stringify([s.machine ?? null, place(s, ps)]);
 const base = (path) => path.replace(/\/+$/, "").split("/").pop();
 // Changes made outside Herdr (an editor's save, a commit in another app): looked
@@ -193,7 +192,7 @@ export default class Spaces extends View {
     this.at = {}; // space -> its where() at the last look
     this.watching = new Set(); // local repos' git folders
     // Spaces made while this runs wait (at most a moment) for their git, so a
-    // worktree appears under its repo instead of jumping there.
+    // row has its branch line at once instead of jumping.
     this.shown = new Set(spaces().map((s) => s.id));
     this.born = {};
     // The space in front at the last look and the folder it showed in, so a
@@ -461,8 +460,8 @@ export default class Spaces extends View {
   }
 
   // A new space `s` under the space it was made from: in that one's folder, and
-  // after it in Herdr's order, which the list keeps inside a folder (a checkout's
-  // worktrees stay between them). space.move's index is where it ends up, from 1.
+  // after it in Herdr's order, which the list keeps inside a folder. space.move's
+  // index is where it ends up, from 1.
   settle(sp, s, from) {
     const f = folders(from.machine);
     if (from.folder && f.of[localId(s)] === undefined && f.list.some((x) => x.id === from.folder)) {
@@ -516,7 +515,7 @@ export default class Spaces extends View {
   }
 
   // A machine's folders, each with its spaces and the machines it takes in,
-  // then the spaces in none. A worktree goes where its checkout's space goes.
+  // then the spaces in none.
   // Every space goes in `seen` in this order, folded away (`hidden`) or not,
   // for the keys that step through the list.
   foldered(rows, machine, t, collapsed, { guests = [], nested = false, hidden = false, seen = [] } = {}) {
@@ -525,11 +524,7 @@ export default class Spaces extends View {
       return away ? [] : [collapsed ? this.compact(r, t) : this.row(r, t)];
     };
     const f = folders(machine), { list } = f, ps = panes();
-    let parent = null;
-    const placed = rows.map((r) => {
-      if (!r.tree) parent = folderOf(r.w, f, ps);
-      return { ...r, folder: parent, nested };
-    });
+    const placed = rows.map((r) => ({ ...r, folder: folderOf(r.w, f, ps), nested }));
     return [
       ...list.flatMap((f, n) => {
         const inside = placed.filter((r) => r.folder === f.id);
@@ -632,25 +627,12 @@ export default class Spaces extends View {
         .child(button("folder-save", "Save", true, () => this.saveFolder())));
   }
 
-  // Spaces in order, each worktree space moved under its main checkout's.
+  // Spaces in order, flat: a worktree space stays where it is, not under its checkout's.
   ordered() {
     const sp = spaces(), ps = panes();
     const ready = (w) => this.shown.has(w.id) || where(w, ps) in this.git || Date.now() - (this.born[w.id] ??= Date.now()) > 1500;
     for (const w of sp) if (!this.shown.has(w.id) && ready(w)) this.shown.add(w.id);
-    const list = sp.map((w, i) => ({ w, i, g: this.git[where(w, ps)] ?? null })).filter((r) => this.shown.has(r.w.id));
-    const mains = new Set(list.filter((r) => r.g && !r.g.linked).map((r) => r.g.repo));
-    const nested = (r) => r.g?.linked && mains.has(r.g.repo);
-    const out = [];
-    const placed = new Set(); // repos whose worktrees are listed (under the first of its spaces)
-    for (const r of list) {
-      if (nested(r)) continue;
-      out.push({ ...r, tree: null });
-      if (!r.g || r.g.linked || placed.has(r.g.repo)) continue;
-      placed.add(r.g.repo);
-      const kids = list.filter((k) => nested(k) && k.g.repo === r.g.repo);
-      kids.forEach((k, n) => out.push({ ...k, tree: n === kids.length - 1 ? "└─" : "├─" }));
-    }
-    return out;
+    return sp.map((w, i) => ({ w, i, g: this.git[where(w, ps)] ?? null })).filter((r) => this.shown.has(r.w.id));
   }
 
   // Whether a machine's spaces are still coming in.
@@ -718,15 +700,10 @@ export default class Spaces extends View {
     ];
   }
 
-  // Only what's unusual, after the name: "herdr \u00b7 spike \u21912 \u21931". The repo or
-  // branch goes when the name already says it (a worktree is named after its branch),
-  // and master/main go: nearly every space is on one.
-  gitTail(g, tree, name, t) {
-    const raw = g.branch ?? "detached";
-    const same = (a) => a.toLowerCase() === name.toLowerCase();
-    const branch = same(raw) || raw === "master" || raw === "main" ? "" : raw;
-    const repo = tree || same(g.name) ? "" : g.name;
-    const where = [repo, branch].filter(Boolean).join(" \u00b7 ");
+  // Only what's unusual, after the name: "herdr \u21912 \u21931". The repo goes when the
+  // name already says it; the branch has its own line (see branchLine).
+  gitTail(g, name, t) {
+    const where = g.name.toLowerCase() === name.toLowerCase() ? "" : g.name;
     return h_flex()
       .flex_1()
       .min_w(0)
@@ -740,7 +717,14 @@ export default class Spaces extends View {
       .when(g.behind > 0, (el) => el.child(div().flex_none().text_color(t.ansi1).child(`\u2193${g.behind}`)));
   }
 
-  row({ w, i, g, tree, folder, nested }, t) {
+  // The second line: the branch of a worktree, or of a checkout off master/main.
+  branchLine(g) {
+    const b = g?.branch ?? (g?.linked ? "detached" : null);
+    return b && (g.linked || (b !== "master" && b !== "main")) ? b : null;
+  }
+
+  row({ w, i, g, folder, nested }, t) {
+    const branch = this.branchLine(g);
     const on = w.active;
     const colors = shared("space.colors") ?? {};
     const color = colors[w.id] ?? "ansi6";
@@ -750,7 +734,7 @@ export default class Spaces extends View {
       .id(`space-${w.id}`)
       .pl(indent(folder, nested))
       .pr(8)
-      .h(rowHeight({ tree }))
+      .h(branch ? 42 : 30)
       .flex_none()
       .justify_center()
       .rounded(8)
@@ -790,11 +774,15 @@ export default class Spaces extends View {
         h_flex()
           .gap(9)
           .items_center()
-          .when(Boolean(tree), el => el.pl(22).child(svg("mods/workspace-chrome/branch.svg").size(13).text_color(t.dim)))
-          .when(!tree, el => el.child(h_flex().size(18).flex_none().rounded(5).bg(fill).items_center().justify_center().text_size(10.5).font_bold().text_color("#ffffff").child([...w.name][0]?.toUpperCase() ?? "?")))
+          .child(h_flex().size(18).flex_none().rounded(5).bg(fill).items_center().justify_center().text_size(10.5).font_bold().text_color("#ffffff").child([...w.name][0]?.toUpperCase() ?? "?"))
           .child(div().flex_shrink(0).max_w(150).truncate().text_color(t.foreground).child(w.name))
-          .child(g ? this.gitTail(g, tree, w.name, t) : div().flex_1()),
-      );
+          .child(g ? this.gitTail(g, w.name, t) : div().flex_1()),
+      )
+      .when(Boolean(branch), (el) => el.child(
+        h_flex().pl(27).gap(5).items_center().text_size(11.5).text_color(t.dim)
+          .child(svg("mods/workspace-chrome/branch.svg").size(11).flex_none())
+          .child(div().min_w(0).truncate().child(branch)),
+      ));
   }
 
   compact({ w, i }, t) {
