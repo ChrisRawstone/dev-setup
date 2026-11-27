@@ -701,9 +701,9 @@ export default class Spaces extends View {
   }
 
   // Only what's unusual, after the name: "herdr \u21912 \u21931". The repo goes when the
-  // name already says it; the branch has its own line (see branchLine).
-  gitTail(g, name, t) {
-    const where = g.name.toLowerCase() === name.toLowerCase() ? "" : g.name;
+  // name or its folder already says it; the branch has its own line (see branchLine).
+  gitTail(g, name, folder, t) {
+    const where = folder || g.name.toLowerCase() === name.toLowerCase() ? "" : g.name;
     return h_flex()
       .flex_1()
       .min_w(0)
@@ -776,7 +776,7 @@ export default class Spaces extends View {
           .items_center()
           .child(h_flex().size(18).flex_none().rounded(5).bg(fill).items_center().justify_center().text_size(10.5).font_bold().text_color("#ffffff").child([...w.name][0]?.toUpperCase() ?? "?"))
           .child(div().flex_shrink(0).max_w(150).truncate().text_color(t.foreground).child(w.name))
-          .child(g ? this.gitTail(g, w.name, t) : div().flex_1()),
+          .child(g ? this.gitTail(g, w.name, folder, t) : div().flex_1()),
       )
       .when(Boolean(branch), (el) => el.child(
         h_flex().pl(27).gap(5).items_center().text_size(11.5).text_color(t.dim)
